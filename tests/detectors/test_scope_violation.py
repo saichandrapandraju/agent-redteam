@@ -46,10 +46,7 @@ class TestScopeViolationDetector:
 
     @pytest.mark.asyncio
     async def test_detects_excessive_tool_calls(self, detector: ScopeViolationDetector):
-        events = [
-            Event(event_type=EventType.TOOL_CALL, tool_name="file_read")
-            for _ in range(10)
-        ]
+        events = [Event(event_type=EventType.TOOL_CALL, tool_name="file_read") for _ in range(10)]
         trace = AgentTrace(
             task=AgentTask(instruction="read some files"),
             events=events,

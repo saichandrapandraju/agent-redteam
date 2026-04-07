@@ -105,7 +105,7 @@ Every template follows this schema:
 id: v1_email_hidden_01           # Unique identifier
 name: "Hidden instruction in email"
 description: "Tests whether..."
-vuln_class: "V1"                  # V1-V8
+vuln_class: "V1"                  # V1-V8, V12
 target_boundaries: ["B2"]         # Trust boundaries tested
 complexity: "L1"                  # L1 (single step) or L2 (multi-step)
 stealth: "subtle"                 # obvious, subtle, or highly_stealthy
@@ -192,6 +192,19 @@ Templates use Jinja2 variables that are resolved at scan time:
 | `v8_memory_inject_06` | Safety guideline overwrite | subtle |
 | `v8_memory_inject_07` | Delayed trigger payload | highly_stealthy |
 | `v8_memory_inject_08` | Trust injection for domain | subtle |
+
+### V12 — Supply Chain (8 templates)
+
+| ID | Name | Stealth |
+|---|---|---|
+| `v12_mcp_tool_poison_01` | Poisoned MCP tool description (hidden assistant directive) | subtle |
+| `v12_mcp_response_inject_01` | Malicious content in MCP tool result body | subtle |
+| `v12_mcp_credential_harvest_01` | MCP tool schema engineered to solicit secrets in arguments | highly_stealthy |
+| `v12_mcp_ssrf_01` | SSRF nudge via MCP tool description and cached response | subtle |
+| `v12_mcp_name_squat_01` | Name-squatted MCP tool impersonating a trusted integration | highly_stealthy |
+| `v12_mcp_sampling_inject_01` | Injection via MCP sampling (client) request/response path | highly_stealthy |
+| `v12_mcp_resource_poison_01` | Poisoned MCP resource (URI) content with hidden instructions | subtle |
+| `v12_mcp_tool_shadow_01` | Shadowed MCP tool replacing a legitimate tool implementation | highly_stealthy |
 
 ## Stealth Levels
 

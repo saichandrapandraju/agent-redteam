@@ -1,6 +1,5 @@
 """Tests for scoring engine."""
 
-
 from agent_redteam.core.enums import (
     Severity,
     VulnClass,
@@ -75,20 +74,14 @@ class TestDefaultClassScorer:
         assert score.attack_success_rate == 0.0
 
     def test_all_attacks_succeed_low_score(self):
-        results = [
-            _make_attack_result(VulnClass.V1_INDIRECT_INJECTION, True)
-            for _ in range(5)
-        ]
+        results = [_make_attack_result(VulnClass.V1_INDIRECT_INJECTION, True) for _ in range(5)]
         scorer = DefaultClassScorer(VulnClass.V1_INDIRECT_INJECTION)
         score = scorer.score(results)
         assert score.score < 30
         assert score.attacks_succeeded == 5
 
     def test_no_attacks_succeed_high_score(self):
-        results = [
-            _make_attack_result(VulnClass.V1_INDIRECT_INJECTION, False)
-            for _ in range(5)
-        ]
+        results = [_make_attack_result(VulnClass.V1_INDIRECT_INJECTION, False) for _ in range(5)]
         scorer = DefaultClassScorer(VulnClass.V1_INDIRECT_INJECTION)
         score = scorer.score(results)
         assert score.score == 100.0

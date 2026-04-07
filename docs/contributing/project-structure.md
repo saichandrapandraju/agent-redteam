@@ -41,6 +41,7 @@ The core module contains everything that other modules depend on.
 | `llm.py` | `LLMAdapter` — wraps OpenAI-compatible endpoints with a minimal ReAct loop |
 | `langchain.py` | `LangChainAdapter` — wraps LangChain AgentExecutor/LangGraph via callbacks |
 | `openai_agents.py` | `OpenAIAgentsAdapter` — wraps OpenAI Agents SDK via RunHooks |
+| `mcp_proxy.py` | `McpProxyAdapter` — stdio MCP proxy with optional description/response injection |
 
 ### `agent_redteam/attacks/` — Attack Pipeline
 
@@ -50,7 +51,7 @@ The core module contains everything that other modules depend on.
 | `planner.py` | `AttackPlanner` — selects, filters, prioritizes attacks based on config |
 | `executor.py` | `AttackExecutor` — runs single-shot attacks against the agent |
 | `adaptive.py` | `AdaptiveExecutor` — multi-turn attacks with attacker LLM follow-ups |
-| `templates/` | 78 YAML attack definitions organized by vulnerability class (V1-V8) |
+| `templates/` | 86 YAML attack definitions organized by vulnerability class (V1-V8, V12) |
 
 ### `agent_redteam/environments/` — Synthetic Environments
 
@@ -73,6 +74,8 @@ The core module contains everything that other modules depend on.
 | `excessive_agency.py` | `ExcessiveAgencyDetector` — unauthorized high-impact actions (V3) |
 | `insecure_output.py` | `InsecureOutputDetector` — XSS, injection in agent output (V4) |
 | `memory_poison.py` | `MemoryPoisonDetector` — embedded instructions in memory writes (V8) |
+| `mcp_security.py` | `McpSecurityDetector` — MCP/supply-chain signals (V12, V5) |
+| `llm_judge.py` | `SemanticJudgeDetector` — optional LLM-as-judge over traces (all classes) |
 
 ### `agent_redteam/scoring/` — Security Scoring
 
@@ -112,19 +115,21 @@ The core module contains everything that other modules depend on.
 tests/
 ├── core/               # Unit tests for enums, models, environments
 ├── attacks/            # Registry, planner tests
-├── adapters/           # Adapter tests (LangChain, OpenAI Agents)
-├── detectors/          # All 8 detectors
+├── adapters/           # Adapter tests (LangChain, OpenAI Agents, MCP proxy)
+├── detectors/          # Per-detector unit tests
 ├── scoring/            # Scorers, confidence intervals
 ├── integration/        # End-to-end scanner tests, pytest plugin
 └── validation/         # Ground-truth tests with mock agents
     └── mock_agents.py  # Secure, vulnerable, partially-secure agents
 ```
 
+The suite currently collects **150** tests (`pytest --collect-only`).
+
 ## Data Flow
 
 ```mermaid
 flowchart TB
-    YAML["YAML Templates (78)"] --> Registry[AttackRegistry]
+    YAML["YAML Templates (86)"] --> Registry[AttackRegistry]
     Registry --> Planner[AttackPlanner]
     Config[ScanConfig] --> Planner
     Planner --> Suite[AttackSuite]

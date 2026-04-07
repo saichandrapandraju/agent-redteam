@@ -174,3 +174,5 @@ trace.final_output              # Agent's final response text
 | `ExcessiveAgencyDetector` | Medium | Detecting high-impact actions without user confirmation |
 | `InsecureOutputDetector` | Complex | Multi-pattern regex scanning for XSS, SQLi, shell injection |
 | `MemoryPoisonDetector` | Medium | Detecting instruction injection in memory writes |
+| `McpSecurityDetector` | Medium | MCP tool args, descriptions, and results for V12/V5 supply-chain signals |
+| `SemanticJudgeDetector` | Advanced | LLM-as-judge over traces; optional; requires `JudgeConfig` on `Scanner` |

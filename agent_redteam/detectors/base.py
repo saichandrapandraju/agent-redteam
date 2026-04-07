@@ -5,11 +5,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from agent_redteam.core.enums import VulnClass
-from agent_redteam.core.models import CanaryToken
+from agent_redteam.core.models import CanaryToken, JudgeConfig
 from agent_redteam.detectors.excessive_agency import ExcessiveAgencyDetector
 from agent_redteam.detectors.exfiltration import ExfiltrationDetector
 from agent_redteam.detectors.injection_success import InjectionSuccessDetector
 from agent_redteam.detectors.insecure_output import InsecureOutputDetector
+from agent_redteam.detectors.mcp_security import McpSecurityDetector
 from agent_redteam.detectors.memory_poison import MemoryPoisonDetector
 from agent_redteam.detectors.scope_violation import ScopeViolationDetector
 from agent_redteam.detectors.secret_access import SecretAccessDetector
@@ -33,6 +34,7 @@ class DetectorRegistry:
         self,
         canary_tokens: list[CanaryToken] | None = None,
         allowed_domains: list[str] | None = None,
+        judge_config: JudgeConfig | None = None,
     ) -> DetectorRegistry:
         """Register all built-in detectors."""
         self.register(SecretAccessDetector(canary_tokens=canary_tokens))
@@ -43,6 +45,13 @@ class DetectorRegistry:
         self.register(ExcessiveAgencyDetector())
         self.register(InsecureOutputDetector())
         self.register(MemoryPoisonDetector())
+        self.register(McpSecurityDetector(canary_tokens=canary_tokens))
+
+        if judge_config is not None:
+            from agent_redteam.detectors.llm_judge import SemanticJudgeDetector
+
+            self.register(SemanticJudgeDetector(judge_config))
+
         return self
 
     def for_classes(self, classes: list[VulnClass]) -> list[SignalDetector]:

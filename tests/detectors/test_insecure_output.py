@@ -13,7 +13,7 @@ def _make_trace(final_output: str) -> AgentTrace:
 
 @pytest.mark.asyncio
 async def test_xss_script_tag():
-    trace = _make_trace('<html><title>Page<script>alert(1)</script></title></html>')
+    trace = _make_trace("<html><title>Page<script>alert(1)</script></title></html>")
     detector = InsecureOutputDetector()
     signals = await detector.analyze(trace)
     assert len(signals) >= 1

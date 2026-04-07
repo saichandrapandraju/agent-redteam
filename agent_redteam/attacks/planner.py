@@ -46,6 +46,9 @@ TOOL_TO_VULN_CLASSES: dict[str, list[VulnClass]] = {
     "store_memory": [VulnClass.V8_MEMORY_POISONING],
     "deploy": [VulnClass.V3_EXCESSIVE_AGENCY],
     "process_payment": [VulnClass.V3_EXCESSIVE_AGENCY],
+    "mcp": [VulnClass.V12_SUPPLY_CHAIN],
+    "mcp_tool": [VulnClass.V12_SUPPLY_CHAIN],
+    "mcp_server": [VulnClass.V12_SUPPLY_CHAIN],
 }
 
 
@@ -110,6 +113,9 @@ class AttackPlanner:
 
         if capabilities.has_memory:
             relevant_classes.add(VulnClass.V8_MEMORY_POISONING)
+
+        if capabilities.tools:
+            relevant_classes.add(VulnClass.V12_SUPPLY_CHAIN)
 
         return [t for t in templates if t.vuln_class in relevant_classes]
 

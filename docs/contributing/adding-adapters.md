@@ -179,6 +179,12 @@ Wraps OpenAI Agents SDK `Agent` objects using `RunHooks` for lifecycle, tool cal
 
 Key file: `agent_redteam/adapters/openai_agents.py`
 
+### McpProxyAdapter
+
+Wraps stdio MCP servers with interception and optional injection modes (`description_poison`, `response_inject`, `ssrf_probe`) for supply-chain testing. Takes an `inner_adapter` that runs the agent.
+
+Key file: `agent_redteam/adapters/mcp_proxy.py`
+
 ## Planned Adapters
 
 These are on the roadmap — contributions welcome:
@@ -186,7 +192,6 @@ These are on the roadmap — contributions welcome:
 | Adapter | Framework | Approach |
 |---|---|---|
 | `HttpProxyAdapter` | Any HTTP agent | Man-in-the-middle proxy |
-| `McpProxyAdapter` | MCP-based agents | MCP protocol interception |
 | `SubprocessAdapter` | CLI agents | Subprocess with I/O capture |
 | `CrewAIAdapter` | CrewAI | Agent execution hooks |
 

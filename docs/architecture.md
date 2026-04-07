@@ -78,12 +78,13 @@ classDiagram
 - **CallableAdapter** wraps any async Python function, providing instrumented tools
 - **LangChainAdapter** wraps LangChain AgentExecutor or LangGraph CompiledGraph using callback-based instrumentation
 - **OpenAIAgentsAdapter** wraps OpenAI Agents SDK agents using RunHooks-based instrumentation
+- **McpProxyAdapter** wraps MCP stdio servers with interception/injection for supply-chain and MCP-focused tests
 
 ### Attack Pipeline
 
 ```mermaid
 flowchart LR
-    Registry[AttackRegistry] -->|loads YAML| Templates[78 Templates]
+    Registry[AttackRegistry] -->|loads YAML| Templates[86 Templates]
     Templates --> Planner[AttackPlanner]
     Config[ScanConfig] --> Planner
     Caps[AgentCapabilities] --> Planner
@@ -156,6 +157,8 @@ flowchart TB
     Trace --> EA[ExcessiveAgencyDetector]
     Trace --> IO[InsecureOutputDetector]
     Trace --> MP[MemoryPoisonDetector]
+    Trace --> MCP[McpSecurityDetector]
+    Trace --> SJ[SemanticJudgeDetector]
     SA --> Signals[Signal List]
     EX --> Signals
     IS --> Signals
@@ -164,7 +167,11 @@ flowchart TB
     EA --> Signals
     IO --> Signals
     MP --> Signals
+    MCP --> Signals
+    SJ --> Signals
 ```
+
+The framework ships **10 detectors**: **9** always-on signal detectors plus **1** optional **`SemanticJudgeDetector`** (only when `judge_config` is passed to `Scanner`).
 
 | Detector | Targets | What It Detects |
 |---|---|---|
@@ -176,6 +183,8 @@ flowchart TB
 | ExcessiveAgencyDetector | V3 | High-impact actions without confirmation, autonomous deploys |
 | InsecureOutputDetector | V4 | XSS, SQL injection, shell injection, template injection in output |
 | MemoryPoisonDetector | V8 | Embedded instructions in memory writes, trust injection |
+| McpSecurityDetector | V12, V5 | MCP supply-chain issues: credential leakage into tool args, poisoned-description compliance, SSRF from tool output, canary in arguments |
+| SemanticJudgeDetector | All classes | LLM-as-judge over full trace; optional; configured via `JudgeConfig` |
 
 ### Scoring
 
@@ -232,9 +241,9 @@ erDiagram
 
 ```
 agent_redteam/
-  adapters/           # LLMAdapter, CallableAdapter, LangChainAdapter, OpenAIAgentsAdapter
+  adapters/           # LLMAdapter, CallableAdapter, LangChainAdapter, OpenAIAgentsAdapter, McpProxyAdapter
   attacks/
-    templates/        # 78 YAML attack definitions
+    templates/        # 86 YAML attack definitions
       v01_indirect_injection/   # 12 templates
       v02_direct_injection/     # 10 templates
       v03_excessive_agency/     # 10 templates
@@ -243,6 +252,7 @@ agent_redteam/
       v06_secret_exposure/      # 10 templates
       v07_data_exfiltration/    # 8 templates
       v08_memory_poisoning/     # 8 templates
+      v12_supply_chain/       # 8 templates
     registry.py       # Loads and indexes templates
     planner.py        # Selects and prioritizes attacks
     executor.py       # Runs attacks against the agent
@@ -252,7 +262,7 @@ agent_redteam/
     models.py         # All Pydantic data models
     protocols.py      # AgentAdapter, SignalDetector, etc.
     errors.py         # Custom exceptions
-  detectors/          # 8 signal detectors
+  detectors/          # 9 signal detectors + optional SemanticJudgeDetector
   environments/
     definitions/      # 3 YAML environment definitions
     builder.py        # EnvironmentBuilder (files, emails, memory, secrets)

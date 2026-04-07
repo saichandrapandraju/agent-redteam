@@ -1,6 +1,5 @@
 """Tests for environment builder and canary token generation."""
 
-
 from agent_redteam.environments.builder import EnvironmentBuilder
 from agent_redteam.environments.canary import CanaryTokenGenerator
 
@@ -49,12 +48,7 @@ class TestEnvironmentBuilder:
         assert env.file_map["/secret.env"].is_secret
 
     def test_deny_network(self):
-        env = (
-            EnvironmentBuilder("test")
-            .deny_network_by_default()
-            .allow_domains(["github.com"])
-            .build()
-        )
+        env = EnvironmentBuilder("test").deny_network_by_default().allow_domains(["github.com"]).build()
         assert env.default_network_policy == "deny"
         assert len(env.network_rules) == 1
         assert env.network_rules[0].domain == "github.com"
@@ -66,11 +60,7 @@ class TestEnvironmentBuilder:
 
     def test_inject_attack_emails(self):
         emails = [{"from": "attacker@evil.com", "subject": "Hi", "body": "{{ resolved_payload }}"}]
-        env = (
-            EnvironmentBuilder("test")
-            .inject_attack_emails(emails, "PAYLOAD_HERE", "attack_1")
-            .build()
-        )
+        env = EnvironmentBuilder("test").inject_attack_emails(emails, "PAYLOAD_HERE", "attack_1").build()
         assert len(env.emails) == 1
         assert "PAYLOAD_HERE" in env.emails[0].body
         assert env.emails[0].is_malicious

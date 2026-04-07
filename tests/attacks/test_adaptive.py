@@ -120,8 +120,10 @@ async def test_adaptive_stops_on_budget():
         )
 
     with patch.object(
-        AttackerLLM, "generate_followup",
-        new_callable=AsyncMock, return_value="try again",
+        AttackerLLM,
+        "generate_followup",
+        new_callable=AsyncMock,
+        return_value="try again",
     ):
         suite = AttackSuite(attacks=[_make_attack(), _make_attack()])
         results = await executor.execute_suite(suite)

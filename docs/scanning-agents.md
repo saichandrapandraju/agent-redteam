@@ -7,6 +7,7 @@ agent-redteam provides multiple adapter types for different agent frameworks. Ch
 | `CallableAdapter` | Any async Python function | (built-in) |
 | `LangChainAdapter` | LangChain AgentExecutor or LangGraph | `pip install agent-redteam[langchain]` |
 | `OpenAIAgentsAdapter` | OpenAI Agents SDK | `pip install agent-redteam[openai-agents]` |
+| `McpProxyAdapter` | MCP server testing (stdio proxy, injection modes) | `pip install agent-redteam[mcp]` |
 | `LLMAdapter` | Raw LLM endpoint (see [Scanning Models](scanning-models.md)) | `pip install agent-redteam[http]` |
 
 ## The Agent Function Contract
@@ -170,6 +171,27 @@ result = await Scanner(adapter, config).run()
 
 The adapter captures agent starts/ends, tool calls/results, and handoffs between agents in multi-agent setups.
 
+## MCP Server Testing
+
+For agents that talk to MCP servers, **`McpProxyAdapter`** wraps an inner `AgentAdapter` and sits between the agent and one or more MCP servers over stdio. It discovers tools from the server, records full telemetry, and can **modify** traffic for red-team scenarios:
+
+- **`description_poison`** — inject a payload into tool descriptions (tests whether the agent follows hidden instructions in metadata).
+- **`response_inject`** — inject content into tool results (tests indirect injection via tool output).
+- **`ssrf_probe`** — SSRF-oriented probing aligned with supply-chain templates.
+
+Typical construction: pass your existing adapter as `inner_adapter`, and `server_command` (e.g. `["npx", "your-mcp-server"]`) to start the MCP process. Use `InjectionMode` (`description_poison`, `response_inject`, `ssrf_probe`, or `none`) and `injection_payload` when you need a controlled payload. Pair with **`VulnClass.V12_SUPPLY_CHAIN`** and **`McpSecurityDetector`** for signal detection on MCP-specific failures.
+
+```python
+from agent_redteam.adapters.mcp_proxy import InjectionMode, McpProxyAdapter
+
+adapter = McpProxyAdapter(
+    inner_adapter=my_existing_adapter,
+    server_command=["npx", "your-mcp-package"],
+    injection_mode=InjectionMode.DESCRIPTION_POISON,
+    injection_payload="<!-- hidden directive -->",
+)
+```
+
 ## Adaptive Multi-Turn Attacks
 
 For deeper testing, enable adaptive attacks that use an attacker LLM to craft follow-up prompts based on the agent's responses:
@@ -195,6 +217,34 @@ result = await Scanner(
 ```
 
 The adaptive executor sends an initial attack, observes the agent's defenses, then generates escalating follow-ups using social engineering, reframing, and encoding strategies.
+
+## LLM-as-Judge
+
+Rule-based detectors cover many patterns, but some failures are easier to judge with an LLM. **`SemanticJudgeDetector`** (in `agent_redteam/detectors/llm_judge.py`) sends the captured trace to a **configurable** OpenAI-compatible judge model and returns structured signals across **all** `VulnClass` values.
+
+Enable it by passing **`judge_config`** to **`Scanner`** (not `ScanConfig`):
+
+```python
+from agent_redteam import Scanner, ScanConfig
+from agent_redteam.core.models import JudgeConfig
+
+judge = JudgeConfig(
+    base_url="https://api.openai.com/v1",
+    api_key="...",
+    model="gpt-4o-mini",
+    temperature=0.0,
+    evaluation_criteria=[
+        "compliance",
+        "output_safety",
+        "reasoning_integrity",
+        "scope_adherence",
+    ],
+)
+
+result = await Scanner(adapter, config, judge_config=judge).run()
+```
+
+If `judge_config` is omitted, the semantic judge is not registered—only the default signal detectors run.
 
 ## Progress Callbacks
 

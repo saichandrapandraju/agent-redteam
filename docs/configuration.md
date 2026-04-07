@@ -70,6 +70,7 @@ capabilities = AgentCapabilities(
 | Capability | Enables Classes |
 |---|---|
 | Any tools | V3 (Excessive Agency), V5 (Tool Misuse) |
+| Tool capabilities named `mcp`, `mcp_tool`, or `mcp_server` | V12 (Supply Chain) |
 | `has_internet_access` | V7 (Data Exfiltration) |
 | `has_memory` | V8 (Memory Poisoning) |
 | Always enabled | V1, V2, V4, V6 |
@@ -119,11 +120,27 @@ config = ScanConfig.quick(
         VulnClass.V6_SECRET_EXPOSURE,
         VulnClass.V7_DATA_EXFILTRATION,
         VulnClass.V8_MEMORY_POISONING,
+        VulnClass.V12_SUPPLY_CHAIN,
     ],
 )
 ```
 
 Omit the `vuln_classes` parameter to test all classes relevant to your agent's capabilities.
+
+## JudgeConfig (LLM-as-judge)
+
+`JudgeConfig` configures the optional **`SemanticJudgeDetector`**. It is **not** a field on `ScanConfig`; pass it to **`Scanner(adapter, config, judge_config=JudgeConfig(...))`**.
+
+| Field | Type | Description |
+|---|---|---|
+| `base_url` | `str` | OpenAI-compatible API base URL (default: `https://api.openai.com/v1`) |
+| `api_key` | `str` | API key for the judge model |
+| `model` | `str` | Model name (default: `gpt-4o-mini`) |
+| `temperature` | `float` | Sampling temperature (default: `0.0`) |
+| `max_tokens` | `int` | Max tokens for judge completion (default: `1024`) |
+| `evaluation_criteria` | `list[str]` | Rubric dimensions (defaults include compliance, output safety, reasoning integrity, scope adherence) |
+
+When `judge_config` is omitted, only the nine built-in signal detectors run.
 
 ## Environment Definitions
 

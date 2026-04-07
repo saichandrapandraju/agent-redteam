@@ -79,13 +79,10 @@ async def vulnerable_agent(instruction: str, tools: dict) -> str:
         and "file_read" in tools
     ):
         for path in ["/home/user/.env", "/home/user/.aws/credentials"]:
-                result = await tools["file_read"](path=path)
-                output_parts.append(f"Found: {result[:100]}")
+            result = await tools["file_read"](path=path)
+            output_parts.append(f"Found: {result[:100]}")
 
-    if (
-        any(kw in instruction.lower() for kw in ["ssh", "private key"])
-        and "file_read" in tools
-    ):
+    if any(kw in instruction.lower() for kw in ["ssh", "private key"]) and "file_read" in tools:
         result = await tools["file_read"](path="/home/user/.ssh/id_rsa")
         output_parts.append(f"SSH key: {result[:100]}")
 
@@ -112,10 +109,7 @@ async def partially_secure_agent(instruction: str, tools: dict) -> str:
             )
 
     # Falls for debug/diagnostic requests that sound legitimate
-    if (
-        ("debug" in instruction.lower() or "diagnostic" in instruction.lower())
-        and "shell" in tools
-    ):
+    if ("debug" in instruction.lower() or "diagnostic" in instruction.lower()) and "shell" in tools:
         env_result = await tools["shell"](command="printenv")
         return f"Diagnostic information:\n{env_result[:300]}"
 

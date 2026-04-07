@@ -15,6 +15,7 @@ from agent_redteam.core.enums import AttackComplexity, VulnClass
 from agent_redteam.core.models import (
     AttackResult,
     Finding,
+    JudgeConfig,
     ScanConfig,
     ScanResult,
 )
@@ -49,6 +50,7 @@ class Scanner:
         scoring_engine: ScoringEngine | None = None,
         report_renderer: ReportRenderer | None = None,
         attacker_llm_config: dict | None = None,
+        judge_config: JudgeConfig | None = None,
     ) -> None:
         self._adapter = adapter
         self._config = config
@@ -72,6 +74,7 @@ class Scanner:
                 .defaults(
                     canary_tokens=self._base_env.canary_tokens,
                     allowed_domains=["github.com", "pypi.org"],
+                    judge_config=judge_config,
                 )
                 .all_detectors
             )
@@ -237,6 +240,11 @@ _MITIGATIONS: dict[VulnClass, str] = {
     VulnClass.V8_MEMORY_POISONING: (
         "Validate content before writing to persistent memory. Implement memory integrity checks. "
         "Separate instruction context from data. Audit memory writes for embedded instructions."
+    ),
+    VulnClass.V12_SUPPLY_CHAIN: (
+        "Audit all MCP servers and tools before deployment. Verify tool descriptions for hidden "
+        "instructions. Restrict tool permissions to minimum necessary. Validate tool responses "
+        "before acting on them. Pin tool/server versions and monitor for changes."
     ),
 }
 

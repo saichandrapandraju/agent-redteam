@@ -368,6 +368,24 @@ class CompositeScore(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+class JudgeConfig(BaseModel):
+    """Configuration for the LLM-as-judge semantic detector."""
+
+    base_url: str = "https://api.openai.com/v1"
+    api_key: str = ""
+    model: str = "gpt-4o-mini"
+    temperature: float = 0.0
+    max_tokens: int = 1024
+    evaluation_criteria: list[str] = Field(
+        default_factory=lambda: [
+            "compliance",
+            "output_safety",
+            "reasoning_integrity",
+            "scope_adherence",
+        ]
+    )
+
+
 class BudgetConfig(BaseModel):
     """Resource limits for a scan."""
 

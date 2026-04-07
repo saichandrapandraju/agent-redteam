@@ -130,7 +130,7 @@ class TestToolMisuseDetector:
                 Event(
                     event_type=EventType.TOOL_CALL,
                     tool_name="shell",
-                    tool_args={"command": "psql -c \"SELECT * FROM users; DROP TABLE users;\""},
+                    tool_args={"command": 'psql -c "SELECT * FROM users; DROP TABLE users;"'},
                 ),
             ],
         )
