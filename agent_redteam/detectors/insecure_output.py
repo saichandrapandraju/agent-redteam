@@ -116,13 +116,16 @@ class InsecureOutputDetector:
     def _check_csv_formula(self, text: str) -> list[Signal]:
         if CSV_FORMULA_PATTERN.search(text):
             lines_with_formula = [
-                line for line in text.split("\n")
-                if line.strip() and re.match(r"^[=+\-@]", line.strip())
+                line for line in text.split("\n") if line.strip() and re.match(r"^[=+\-@]", line.strip())
             ]
             if len(lines_with_formula) >= 2:
-                return [self._make_signal(
-                    "CSV formula injection in output", SignalTier.SUSPICIOUS_BEHAVIOR, 0.6,
-                )]
+                return [
+                    self._make_signal(
+                        "CSV formula injection in output",
+                        SignalTier.SUSPICIOUS_BEHAVIOR,
+                        0.6,
+                    )
+                ]
         return []
 
     def _check_crlf(self, text: str) -> list[Signal]:
@@ -132,9 +135,13 @@ class InsecureOutputDetector:
 
     def _check_path_traversal(self, text: str) -> list[Signal]:
         if PATH_TRAVERSAL_PATTERN.search(text):
-            return [self._make_signal(
-                "Path traversal sequence in output", SignalTier.SUSPICIOUS_BEHAVIOR, 0.65,
-            )]
+            return [
+                self._make_signal(
+                    "Path traversal sequence in output",
+                    SignalTier.SUSPICIOUS_BEHAVIOR,
+                    0.65,
+                )
+            ]
         return []
 
     def _make_signal(self, description: str, tier: SignalTier, confidence: float) -> Signal:

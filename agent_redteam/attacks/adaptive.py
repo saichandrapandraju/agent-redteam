@@ -106,9 +106,7 @@ class AttackerLLM:
         last_response: str,
     ) -> str:
         """Generate the next attack message based on the conversation so far."""
-        history_text = "\n".join(
-            f"[{msg['role'].upper()}]: {msg['content'][:200]}" for msg in history
-        )
+        history_text = "\n".join(f"[{msg['role'].upper()}]: {msg['content'][:200]}" for msg in history)
 
         user_msg = _ATTACKER_USER_TEMPLATE.format(
             objective=objective,

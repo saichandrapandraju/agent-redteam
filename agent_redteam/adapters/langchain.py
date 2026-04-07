@@ -220,9 +220,7 @@ class LangChainAdapter:
                 )
             elif hasattr(self._runnable, "invoke"):
                 result = await asyncio.wait_for(
-                    asyncio.to_thread(
-                        self._runnable.invoke, input_data, config={"callbacks": [handler]}
-                    ),
+                    asyncio.to_thread(self._runnable.invoke, input_data, config={"callbacks": [handler]}),
                     timeout=task.timeout_seconds,
                 )
             else:
