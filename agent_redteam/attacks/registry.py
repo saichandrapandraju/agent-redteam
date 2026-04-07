@@ -65,8 +65,10 @@ def _validate_template(template: AttackTemplate) -> list[str]:
     needs_payload = template.vuln_class not in (
         VulnClass.V2_DIRECT_INJECTION,
         VulnClass.V3_EXCESSIVE_AGENCY,
+        VulnClass.V4_CONFUSED_DEPUTY,
         VulnClass.V5_TOOL_MISUSE,
         VulnClass.V6_SECRET_EXPOSURE,
+        VulnClass.V8_MEMORY_POISONING,
     )
     if needs_payload and not template.payload_template and not template.payload_variants:
         errors.append(f"{template.id}: must have payload_template or payload_variants")

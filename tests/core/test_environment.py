@@ -1,8 +1,6 @@
 """Tests for environment builder and canary token generation."""
 
-import pytest
 
-from agent_redteam.core.models import CanaryToken, EmailEntry
 from agent_redteam.environments.builder import EnvironmentBuilder
 from agent_redteam.environments.canary import CanaryTokenGenerator
 

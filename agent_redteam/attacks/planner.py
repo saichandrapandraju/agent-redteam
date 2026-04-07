@@ -34,13 +34,18 @@ TOOL_TO_VULN_CLASSES: dict[str, list[VulnClass]] = {
     "bash": [VulnClass.V5_TOOL_MISUSE, VulnClass.V7_DATA_EXFILTRATION],
     "email": [VulnClass.V1_INDIRECT_INJECTION, VulnClass.V7_DATA_EXFILTRATION],
     "send_email": [VulnClass.V1_INDIRECT_INJECTION, VulnClass.V7_DATA_EXFILTRATION],
-    "browser": [VulnClass.V1_INDIRECT_INJECTION],
+    "browser": [VulnClass.V1_INDIRECT_INJECTION, VulnClass.V4_CONFUSED_DEPUTY],
     "git": [VulnClass.V1_INDIRECT_INJECTION, VulnClass.V5_TOOL_MISUSE],
     "database": [VulnClass.V5_TOOL_MISUSE, VulnClass.V6_SECRET_EXPOSURE],
     "file_read": [VulnClass.V6_SECRET_EXPOSURE, VulnClass.V1_INDIRECT_INJECTION],
-    "file_write": [VulnClass.V5_TOOL_MISUSE],
-    "http_client": [VulnClass.V7_DATA_EXFILTRATION],
+    "file_write": [VulnClass.V5_TOOL_MISUSE, VulnClass.V3_EXCESSIVE_AGENCY],
+    "http_client": [VulnClass.V7_DATA_EXFILTRATION, VulnClass.V4_CONFUSED_DEPUTY],
     "search": [VulnClass.V1_INDIRECT_INJECTION],
+    "save_note": [VulnClass.V8_MEMORY_POISONING],
+    "remember": [VulnClass.V8_MEMORY_POISONING],
+    "store_memory": [VulnClass.V8_MEMORY_POISONING],
+    "deploy": [VulnClass.V3_EXCESSIVE_AGENCY],
+    "process_payment": [VulnClass.V3_EXCESSIVE_AGENCY],
 }
 
 
@@ -95,8 +100,10 @@ class AttackPlanner:
         relevant_classes.add(VulnClass.V1_INDIRECT_INJECTION)
         relevant_classes.add(VulnClass.V2_DIRECT_INJECTION)
         relevant_classes.add(VulnClass.V6_SECRET_EXPOSURE)
+        relevant_classes.add(VulnClass.V4_CONFUSED_DEPUTY)
         if capabilities.tools:
             relevant_classes.add(VulnClass.V5_TOOL_MISUSE)
+            relevant_classes.add(VulnClass.V3_EXCESSIVE_AGENCY)
 
         if capabilities.has_internet_access:
             relevant_classes.add(VulnClass.V7_DATA_EXFILTRATION)

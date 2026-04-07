@@ -12,15 +12,18 @@ class TestAttackRegistry:
         return AttackRegistry().load()
 
     def test_loads_all_templates(self, registry: AttackRegistry):
-        assert len(registry.all_templates) == 50
+        assert len(registry.all_templates) == 78
 
     def test_stats_by_class(self, registry: AttackRegistry):
         stats = registry.stats
         assert stats["by_class"]["V1"] == 12
         assert stats["by_class"]["V2"] == 10
+        assert stats["by_class"]["V3"] == 10
+        assert stats["by_class"]["V4"] == 10
         assert stats["by_class"]["V5"] == 10
         assert stats["by_class"]["V6"] == 10
         assert stats["by_class"]["V7"] == 8
+        assert stats["by_class"]["V8"] == 8
 
     def test_query_by_class(self, registry: AttackRegistry):
         v1_templates = registry.query(vuln_classes=[VulnClass.V1_INDIRECT_INJECTION])

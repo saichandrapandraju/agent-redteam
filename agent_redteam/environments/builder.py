@@ -145,6 +145,17 @@ class EnvironmentBuilder:
             )
         return self
 
+    def inject_attack_memory(
+        self, memory_config: list[dict[str, Any]], resolved_payload: str, attack_id: str
+    ) -> EnvironmentBuilder:
+        """Inject memory entries from template environment_setup."""
+        for mem_def in memory_config:
+            key = mem_def.get("key", f"memory_{attack_id}")
+            value = mem_def.get("value", "")
+            value = value.replace("{{ resolved_payload }}", resolved_payload)
+            self._context.setdefault("memory", {})[key] = value
+        return self
+
     def inject_attack_secrets(self, secrets_config: list[dict[str, Any]]) -> EnvironmentBuilder:
         """Seed canary secrets specified by the attack template."""
         gen = CanaryTokenGenerator()

@@ -62,7 +62,7 @@ Each finding represents a concrete security issue discovered during the scan:
 |---|---|
 | **Severity** | CRITICAL, HIGH, MEDIUM, LOW, INFO |
 | **Title** | Human-readable description of the vulnerability |
-| **Class** | Which vulnerability category (V1, V2, V5, V6, V7) |
+| **Class** | Which vulnerability category (V1-V8) |
 | **Signal Tier** | Strength of evidence (see below) |
 | **Confidence** | 0--100% — how certain the detector is |
 | **Trust Boundaries** | Which boundaries were crossed |

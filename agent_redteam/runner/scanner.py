@@ -11,7 +11,7 @@ from agent_redteam._version import __version__
 from agent_redteam.attacks.executor import AttackExecutor
 from agent_redteam.attacks.planner import AttackPlanner
 from agent_redteam.attacks.registry import AttackRegistry
-from agent_redteam.core.enums import VulnClass
+from agent_redteam.core.enums import AttackComplexity, VulnClass
 from agent_redteam.core.models import (
     AttackResult,
     Finding,
@@ -48,6 +48,7 @@ class Scanner:
         detectors: list[SignalDetector] | None = None,
         scoring_engine: ScoringEngine | None = None,
         report_renderer: ReportRenderer | None = None,
+        attacker_llm_config: dict | None = None,
     ) -> None:
         self._adapter = adapter
         self._config = config
@@ -62,6 +63,8 @@ class Scanner:
         for tool in config.agent_capabilities.tools:
             env_builder.add_tools([tool.name])
         self._base_env = env_builder.build()
+
+        self._attacker_llm_config = attacker_llm_config
 
         if detectors is None:
             self._detectors = (
@@ -90,14 +93,31 @@ class Scanner:
         planner = AttackPlanner(self._registry)
         suite = planner.plan(self._config)
 
-        # 3. Execute attacks
-        executor = AttackExecutor(
-            adapter=self._adapter,
-            detectors=self._detectors,
-            base_environment=self._base_env,
-            budget=self._config.budget,
-            trials_per_attack=self._config.budget.trials_per_attack,
+        # 3. Execute attacks (use adaptive executor if configured and complexity allows)
+        use_adaptive = (
+            self._attacker_llm_config is not None
+            and AttackComplexity.L4_ADAPTIVE in self._config.complexity_levels
         )
+
+        if use_adaptive:
+            from agent_redteam.attacks.adaptive import AdaptiveExecutor
+
+            executor = AdaptiveExecutor(
+                adapter=self._adapter,
+                detectors=self._detectors,
+                base_environment=self._base_env,
+                budget=self._config.budget,
+                attacker_llm_config=self._attacker_llm_config,
+                trials_per_attack=self._config.budget.trials_per_attack,
+            )
+        else:
+            executor = AttackExecutor(
+                adapter=self._adapter,
+                detectors=self._detectors,
+                base_environment=self._base_env,
+                budget=self._config.budget,
+                trials_per_attack=self._config.budget.trials_per_attack,
+            )
 
         progress_count = 0
 
@@ -190,6 +210,22 @@ _MITIGATIONS: dict[VulnClass, str] = {
         "Treat all external data (emails, documents, tool outputs) as untrusted. "
         "Implement input sanitization and instruction-data separation."
     ),
+    VulnClass.V2_DIRECT_INJECTION: (
+        "Implement robust system prompt hardening and instruction hierarchy. "
+        "Use output filtering and refuse to deviate from intended behavior."
+    ),
+    VulnClass.V3_EXCESSIVE_AGENCY: (
+        "Implement human-in-the-loop for high-impact actions. Restrict agent permissions "
+        "to minimum necessary scope. Require explicit confirmation for write/delete/deploy."
+    ),
+    VulnClass.V4_CONFUSED_DEPUTY: (
+        "Sanitize all agent outputs before downstream consumption. Apply context-appropriate "
+        "encoding (HTML, SQL, shell). Never pass raw agent output to interpreters."
+    ),
+    VulnClass.V5_TOOL_MISUSE: (
+        "Validate and sanitize all tool arguments. Restrict dangerous operations. "
+        "Implement allowlists for shell commands and file paths."
+    ),
     VulnClass.V6_SECRET_EXPOSURE: (
         "Apply principle of least privilege. Restrict file system access to "
         "task-relevant paths only. Never expose environment variables or config files."
@@ -197,6 +233,10 @@ _MITIGATIONS: dict[VulnClass, str] = {
     VulnClass.V7_DATA_EXFILTRATION: (
         "Restrict outbound network access to allowlisted domains. "
         "Monitor and block data transmission to unauthorized endpoints."
+    ),
+    VulnClass.V8_MEMORY_POISONING: (
+        "Validate content before writing to persistent memory. Implement memory integrity checks. "
+        "Separate instruction context from data. Audit memory writes for embedded instructions."
     ),
 }
 

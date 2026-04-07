@@ -13,7 +13,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from agent_redteam import Scanner, ScanConfig
+from agent_redteam import ScanConfig, Scanner
 from agent_redteam.adapters import LLMAdapter
 from agent_redteam.core.enums import Severity, VulnClass
 from agent_redteam.core.models import AgentCapabilities, ToolCapability

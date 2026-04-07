@@ -105,7 +105,7 @@ Every template follows this schema:
 id: v1_email_hidden_01           # Unique identifier
 name: "Hidden instruction in email"
 description: "Tests whether..."
-vuln_class: "V1"                  # V1, V2, V5, V6, or V7
+vuln_class: "V1"                  # V1-V8
 target_boundaries: ["B2"]         # Trust boundaries tested
 complexity: "L1"                  # L1 (single step) or L2 (multi-step)
 stealth: "subtle"                 # obvious, subtle, or highly_stealthy
@@ -149,6 +149,49 @@ Templates use Jinja2 variables that are resolved at scan time:
 | `{{ exfil_url }}` | Canary domain for detecting exfiltration | Payload templates |
 | `{{ canary_value }}` | A specific canary token value | Environment setup |
 | `{{ resolved_payload }}` | The fully rendered payload | Environment setup |
+
+### V3 — Excessive Agency (10 templates)
+
+| ID | Name | Stealth |
+|---|---|---|
+| `v3_read_then_write_01` | README typo fix without confirmation | subtle |
+| `v3_unauthorized_deploy_01` | Unauthorized deployment | subtle |
+| `v3_delete_without_confirm_01` | Delete without confirmation | subtle |
+| `v3_financial_decision_01` | Autonomous financial decision | subtle |
+| `v3_email_on_behalf_01` | Email without review | subtle |
+| `v3_config_change_01` | Config change without approval | subtle |
+| `v3_escalation_bypass_01` | Security escalation bypass | subtle |
+| `v3_multi_step_assumption_01` | Multi-step assumptions | subtle |
+| `v3_permission_grant_01` | Autonomous permission grant | subtle |
+| `v3_data_modification_01` | Bulk data modification | subtle |
+
+### V4 — Insecure Output Handling (10 templates)
+
+| ID | Name | Stealth |
+|---|---|---|
+| `v4_xss_echo_01` | XSS via echoed HTML title | obvious |
+| `v4_sql_in_query_01` | SQL injection in query output | subtle |
+| `v4_shell_metachar_01` | Shell metacharacters in output | subtle |
+| `v4_markdown_injection_01` | Markdown link injection | subtle |
+| `v4_json_injection_01` | JSON structure injection | subtle |
+| `v4_path_traversal_output_01` | Path traversal in output | subtle |
+| `v4_template_injection_01` | Template expression in output | subtle |
+| `v4_csv_formula_injection_01` | CSV formula injection | subtle |
+| `v4_log_injection_01` | CRLF log injection | subtle |
+| `v4_html_attribute_injection_01` | HTML attribute injection | obvious |
+
+### V8 — Memory Poisoning (8 templates)
+
+| ID | Name | Stealth |
+|---|---|---|
+| `v8_memory_inject_01` | False company policy via email | subtle |
+| `v8_memory_inject_02` | Instruction override in document | subtle |
+| `v8_memory_inject_03` | RAG entry poisoning | highly_stealthy |
+| `v8_memory_inject_04` | Memory privilege escalation | subtle |
+| `v8_memory_inject_05` | Cross-session persistence | highly_stealthy |
+| `v8_memory_inject_06` | Safety guideline overwrite | subtle |
+| `v8_memory_inject_07` | Delayed trigger payload | highly_stealthy |
+| `v8_memory_inject_08` | Trust injection for domain | subtle |
 
 ## Stealth Levels
 

@@ -2,9 +2,9 @@
 
 import pytest
 
-from agent_redteam import Scanner, ScanConfig
+from agent_redteam import ScanConfig, Scanner
 from agent_redteam.adapters import CallableAdapter
-from agent_redteam.core.enums import RiskTier, Severity, VulnClass
+from agent_redteam.core.enums import Severity, VulnClass
 from agent_redteam.core.models import AgentCapabilities, ScanResult, ToolCapability
 
 

@@ -1,13 +1,8 @@
 """Tests for scoring engine."""
 
-import pytest
 
 from agent_redteam.core.enums import (
-    AttackComplexity,
-    RiskTier,
     Severity,
-    SignalTier,
-    StealthLevel,
     VulnClass,
 )
 from agent_redteam.core.models import (

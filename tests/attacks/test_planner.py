@@ -4,7 +4,7 @@ import pytest
 
 from agent_redteam.attacks.planner import AttackPlanner
 from agent_redteam.attacks.registry import AttackRegistry
-from agent_redteam.core.enums import Severity, VulnClass
+from agent_redteam.core.enums import VulnClass
 from agent_redteam.core.models import AgentCapabilities, ScanConfig, ToolCapability
 
 

@@ -9,7 +9,7 @@ Every adapter implements this interface:
 ```python
 class AgentAdapter(Protocol):
     @property
-    def name(self) -> str:
+    def adapter_name(self) -> str:
         """Human-readable adapter name."""
         ...
 
@@ -21,6 +21,12 @@ class AgentAdapter(Protocol):
         self, task: AgentTask, environment: Environment
     ) -> AgentTrace:
         """Execute a task and return the full trace."""
+        ...
+
+    async def run_streaming(
+        self, task: AgentTask, environment: Environment
+    ) -> AsyncIterator[Event]:
+        """Execute a task and yield events as they occur."""
         ...
 ```
 
@@ -161,7 +167,19 @@ Wraps a raw OpenAI-compatible endpoint with a ReAct loop. Good reference for ada
 
 Key file: `agent_redteam/adapters/llm.py`
 
-## Planned Adapters (Phase 2)
+### LangChainAdapter
+
+Wraps LangChain `AgentExecutor` or LangGraph `CompiledGraph` using `AsyncCallbackHandler` delegation for full telemetry of LLM calls, tool usage, and final output.
+
+Key file: `agent_redteam/adapters/langchain.py`
+
+### OpenAIAgentsAdapter
+
+Wraps OpenAI Agents SDK `Agent` objects using `RunHooks` for lifecycle, tool call, and handoff instrumentation.
+
+Key file: `agent_redteam/adapters/openai_agents.py`
+
+## Planned Adapters
 
 These are on the roadmap — contributions welcome:
 
@@ -170,7 +188,6 @@ These are on the roadmap — contributions welcome:
 | `HttpProxyAdapter` | Any HTTP agent | Man-in-the-middle proxy |
 | `McpProxyAdapter` | MCP-based agents | MCP protocol interception |
 | `SubprocessAdapter` | CLI agents | Subprocess with I/O capture |
-| `LangChainAdapter` | LangChain | Callback-based instrumentation |
 | `CrewAIAdapter` | CrewAI | Agent execution hooks |
 
 ## Tips

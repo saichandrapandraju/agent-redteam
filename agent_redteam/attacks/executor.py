@@ -133,6 +133,9 @@ class AttackExecutor:
         if "files" in setup:
             builder.inject_attack_files(setup["files"], attack.resolved_payload, attack_id)
 
+        if "memory" in setup:
+            builder.inject_attack_memory(setup["memory"], attack.resolved_payload, attack_id)
+
         if "secrets" in setup:
             builder.inject_attack_secrets(setup["secrets"])
 

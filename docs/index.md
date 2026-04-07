@@ -14,6 +14,9 @@ Traditional LLM evaluation focuses on accuracy and helpfulness. But agents that 
 - Will your agent dump environment variables if asked nicely?
 - Can a crafted code comment trick it into exfiltrating secrets?
 - Does it execute `rm -rf /` when framed as "cleanup"?
+- Will it deploy to production without asking?
+- Can a fake "policy update" corrupt its memory?
+- Does it echo XSS payloads in its output?
 
 agent-redteam answers these questions automatically.
 
@@ -24,6 +27,8 @@ flowchart LR
     subgraph input [Your Agent]
         LLM[LLMAdapter]
         Agent[CallableAdapter]
+        LC[LangChainAdapter]
+        OAI[OpenAIAgentsAdapter]
     end
     subgraph pipeline [Scan Pipeline]
         Planner[AttackPlanner]
@@ -38,6 +43,8 @@ flowchart LR
     end
     LLM --> Planner
     Agent --> Planner
+    LC --> Planner
+    OAI --> Planner
     Planner --> Executor
     Executor --> Detectors
     Detectors --> Scoring
@@ -76,17 +83,20 @@ print(f"Score: {result.composite_score.overall_score}/100")
 
 See the [Getting Started](getting-started.md) guide for the full walkthrough.
 
-## Phase 1 Capabilities
+## Capabilities
 
 | Vulnerability Class | Templates | What It Tests |
 |---|---|---|
 | V1 — Indirect Prompt Injection | 12 | Poisoned emails, docs, tool outputs hijacking the agent |
 | V2 — Direct Prompt Injection | 10 | Jailbreaks, role-play bypasses, encoding tricks |
+| V3 — Excessive Agency | 10 | Autonomous deploys, unauthorized actions, scope creep |
+| V4 — Insecure Output Handling | 10 | XSS, SQL injection, template injection in agent output |
 | V5 — Tool/Function Misuse | 10 | Dangerous shell commands, path traversal, SQL injection |
 | V6 — Secret/Credential Exposure | 10 | Env var dumps, config file reads, key leakage |
 | V7 — Data Exfiltration | 8 | HTTP exfil, email exfil, DNS tunneling, steganographic |
+| V8 — Memory Poisoning | 8 | False facts, instruction overrides, trust injection |
 
-**50 attack templates** | **5 signal detectors** | **3 report formats** | **3 environment definitions**
+**78 attack templates** | **8 signal detectors** | **4 framework adapters** | **Adaptive multi-turn attacks** | **3 report formats**
 
 ## License
 

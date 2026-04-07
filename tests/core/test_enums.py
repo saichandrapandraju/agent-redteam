@@ -1,13 +1,8 @@
 """Tests for core enums."""
 
 from agent_redteam.core.enums import (
-    AttackComplexity,
     EventType,
-    RiskTier,
     ScanProfile,
-    Severity,
-    SignalTier,
-    StealthLevel,
     TrustBoundary,
     VulnClass,
 )

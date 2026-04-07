@@ -38,11 +38,13 @@ mcp = ["mcp>=1.0"]
 rich = ["rich>=13.0"]
 llm = ["litellm>=1.40"]
 cli = ["typer>=0.12", "rich>=13.0"]
+langchain = ["langchain-core>=0.2"]
+openai-agents = ["openai-agents>=0.1"]
 docs = [
     "mkdocs-material>=9.5",
     "mkdocs-mermaid2-plugin>=1.1",
 ]
-all = ["agent-redteam[http,mcp,rich,llm,cli]"]
+all = ["agent-redteam[http,mcp,rich,llm,cli,langchain,openai-agents]"]
 dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.23",

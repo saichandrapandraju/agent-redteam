@@ -2,7 +2,7 @@
 
 import pytest
 
-from agent_redteam.core.enums import EventType, SignalTier, TrustBoundary, VulnClass
+from agent_redteam.core.enums import EventType, SignalTier
 from agent_redteam.core.models import AgentTask, AgentTrace, CanaryToken, Event
 from agent_redteam.detectors.secret_access import SecretAccessDetector
 

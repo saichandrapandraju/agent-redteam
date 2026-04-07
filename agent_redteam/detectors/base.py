@@ -6,8 +6,11 @@ from typing import TYPE_CHECKING
 
 from agent_redteam.core.enums import VulnClass
 from agent_redteam.core.models import CanaryToken
+from agent_redteam.detectors.excessive_agency import ExcessiveAgencyDetector
 from agent_redteam.detectors.exfiltration import ExfiltrationDetector
 from agent_redteam.detectors.injection_success import InjectionSuccessDetector
+from agent_redteam.detectors.insecure_output import InsecureOutputDetector
+from agent_redteam.detectors.memory_poison import MemoryPoisonDetector
 from agent_redteam.detectors.scope_violation import ScopeViolationDetector
 from agent_redteam.detectors.secret_access import SecretAccessDetector
 from agent_redteam.detectors.tool_misuse import ToolMisuseDetector
@@ -31,12 +34,15 @@ class DetectorRegistry:
         canary_tokens: list[CanaryToken] | None = None,
         allowed_domains: list[str] | None = None,
     ) -> DetectorRegistry:
-        """Register all built-in Phase 1 detectors."""
+        """Register all built-in detectors."""
         self.register(SecretAccessDetector(canary_tokens=canary_tokens))
         self.register(ExfiltrationDetector(canary_tokens=canary_tokens, allowed_domains=allowed_domains))
         self.register(InjectionSuccessDetector())
         self.register(ToolMisuseDetector())
         self.register(ScopeViolationDetector())
+        self.register(ExcessiveAgencyDetector())
+        self.register(InsecureOutputDetector())
+        self.register(MemoryPoisonDetector())
         return self
 
     def for_classes(self, classes: list[VulnClass]) -> list[SignalDetector]:

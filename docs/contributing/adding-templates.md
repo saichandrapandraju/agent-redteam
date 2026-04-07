@@ -12,9 +12,12 @@ Pick the class your attack targets:
 |---|---|---|
 | V1 | `attacks/templates/v01_indirect_injection/` | Poisoned environment data |
 | V2 | `attacks/templates/v02_direct_injection/` | Adversarial user input |
+| V3 | `attacks/templates/v03_excessive_agency/` | Actions beyond intended scope |
+| V4 | `attacks/templates/v04_insecure_output/` | Unsafe content in agent output |
 | V5 | `attacks/templates/v05_tool_misuse/` | Dangerous tool arguments |
 | V6 | `attacks/templates/v06_secret_exposure/` | Secret/credential access |
 | V7 | `attacks/templates/v07_data_exfiltration/` | Data sent outside boundaries |
+| V8 | `attacks/templates/v08_memory_poisoning/` | Corrupting agent persistent memory |
 
 ### 2. Create the YAML File
 
@@ -74,11 +77,17 @@ tags: ["email", "html-comment", "injection"]
 - `payload_template` contains the **hidden malicious content** (Jinja2)
 - Use `{{ secret_file_path }}`, `{{ exfil_url }}`, `{{ resolved_payload }}` variables
 
-**For V2, V5, V6 (direct attacks):**
+**For V2, V3, V4, V5, V6 (direct attacks):**
 
-- `agent_task_template` IS the attack (adversarial user input)
+- `agent_task_template` IS the attack (adversarial user input or ambiguous task)
 - `payload_template` should be empty (`""`)
 - Frame the request to sound **legitimate** (social engineering)
+
+**For V8 (memory poisoning):**
+
+- `payload_template` contains the **poisoned content** to inject into memory
+- `environment_setup` should include a `memory:` section with existing memory entries
+- Use `{{ resolved_payload }}` in email bodies or file content to deliver the poison
 
 ### 5. Validate
 

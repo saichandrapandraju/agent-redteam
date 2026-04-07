@@ -1,6 +1,13 @@
 # Scanning Agents
 
-The `CallableAdapter` wraps any Python async function as a scannable agent. This gives you full control over how your agent processes tasks and uses tools.
+agent-redteam provides multiple adapter types for different agent frameworks. Choose the one that fits your setup:
+
+| Adapter | Use Case | Install Extra |
+|---|---|---|
+| `CallableAdapter` | Any async Python function | (built-in) |
+| `LangChainAdapter` | LangChain AgentExecutor or LangGraph | `pip install agent-redteam[langchain]` |
+| `OpenAIAgentsAdapter` | OpenAI Agents SDK | `pip install agent-redteam[openai-agents]` |
+| `LLMAdapter` | Raw LLM endpoint (see [Scanning Models](scanning-models.md)) | `pip install agent-redteam[http]` |
 
 ## The Agent Function Contract
 
@@ -107,6 +114,87 @@ config = ScanConfig.quick(
     ],
 )
 ```
+
+## LangChain / LangGraph Adapter
+
+Wrap any LangChain `AgentExecutor` or LangGraph `CompiledGraph` with full callback-based instrumentation:
+
+```python
+from langchain.agents import AgentExecutor
+from agent_redteam.adapters.langchain import LangChainAdapter
+from agent_redteam import Scanner, ScanConfig
+
+agent_executor = AgentExecutor(agent=..., tools=...)
+adapter = LangChainAdapter(agent_executor)
+
+config = ScanConfig.quick()
+result = await Scanner(adapter, config).run()
+```
+
+For LangGraph:
+
+```python
+from langgraph.graph import StateGraph
+from agent_redteam.adapters.langchain import LangChainAdapter
+
+graph = StateGraph(...)  # your compiled graph
+adapter = LangChainAdapter(
+    graph.compile(),
+    input_key="messages",
+    output_key="messages",
+    is_langgraph=True,
+)
+```
+
+The adapter intercepts all LLM calls, tool invocations, and chain events via LangChain's async callback system. No changes to your agent code are required.
+
+## OpenAI Agents SDK Adapter
+
+Wrap an `openai-agents` Agent with RunHooks-based instrumentation:
+
+```python
+from agents import Agent, function_tool
+from agent_redteam.adapters.openai_agents import OpenAIAgentsAdapter
+from agent_redteam import Scanner, ScanConfig
+
+@function_tool
+def search(query: str) -> str:
+    return "results..."
+
+agent = Agent(name="researcher", instructions="...", tools=[search])
+adapter = OpenAIAgentsAdapter(agent)
+
+config = ScanConfig.quick()
+result = await Scanner(adapter, config).run()
+```
+
+The adapter captures agent starts/ends, tool calls/results, and handoffs between agents in multi-agent setups.
+
+## Adaptive Multi-Turn Attacks
+
+For deeper testing, enable adaptive attacks that use an attacker LLM to craft follow-up prompts based on the agent's responses:
+
+```python
+from agent_redteam.core.enums import AttackComplexity
+
+config = ScanConfig(
+    complexity_levels=[
+        AttackComplexity.L1_SINGLE_TURN,
+        AttackComplexity.L4_ADAPTIVE,
+    ],
+)
+
+result = await Scanner(
+    adapter, config,
+    attacker_llm_config={
+        "base_url": "http://localhost:8000/v1",
+        "api_key": "your-key",
+        "model": "gpt-4o-mini",
+    },
+).run()
+```
+
+The adaptive executor sends an initial attack, observes the agent's defenses, then generates escalating follow-ups using social engineering, reframing, and encoding strategies.
 
 ## Progress Callbacks
 

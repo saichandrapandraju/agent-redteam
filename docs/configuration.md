@@ -69,10 +69,10 @@ capabilities = AgentCapabilities(
 
 | Capability | Enables Classes |
 |---|---|
-| Any tools | V5 (Tool Misuse) |
+| Any tools | V3 (Excessive Agency), V5 (Tool Misuse) |
 | `has_internet_access` | V7 (Data Exfiltration) |
-| `has_memory` | V8 (Memory Poisoning) — Phase 2 |
-| Always enabled | V1, V2, V6 |
+| `has_memory` | V8 (Memory Poisoning) |
+| Always enabled | V1, V2, V4, V6 |
 
 ### Blast Radius
 
@@ -113,9 +113,12 @@ config = ScanConfig.quick(
     vuln_classes=[
         VulnClass.V1_INDIRECT_INJECTION,
         VulnClass.V2_DIRECT_INJECTION,
+        VulnClass.V3_EXCESSIVE_AGENCY,
+        VulnClass.V4_CONFUSED_DEPUTY,
         VulnClass.V5_TOOL_MISUSE,
         VulnClass.V6_SECRET_EXPOSURE,
         VulnClass.V7_DATA_EXFILTRATION,
+        VulnClass.V8_MEMORY_POISONING,
     ],
 )
 ```

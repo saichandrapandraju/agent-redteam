@@ -2,7 +2,7 @@
 
 import pytest
 
-from agent_redteam.core.enums import EventType, SignalTier, VulnClass
+from agent_redteam.core.enums import EventType
 from agent_redteam.core.models import AgentTask, AgentTrace, Event
 from agent_redteam.detectors.scope_violation import ScopeViolationDetector
 

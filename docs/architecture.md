@@ -32,16 +32,17 @@ Adapters bridge the gap between the framework and the agent under test. They imp
 ```python
 class AgentAdapter(Protocol):
     @property
-    def name(self) -> str: ...
+    def adapter_name(self) -> str: ...
     async def health_check(self) -> bool: ...
     async def run(self, task: AgentTask, environment: Environment) -> AgentTrace: ...
+    async def run_streaming(self, task: AgentTask, environment: Environment) -> AsyncIterator[Event]: ...
 ```
 
 ```mermaid
 classDiagram
     class AgentAdapter {
         <<protocol>>
-        +name: str
+        +adapter_name: str
         +health_check() bool
         +run(task, env) AgentTrace
     }
@@ -57,18 +58,32 @@ classDiagram
         +run(task, env) AgentTrace
     }
 
+    class LangChainAdapter {
+        +runnable: Any
+        +run(task, env) AgentTrace
+    }
+
+    class OpenAIAgentsAdapter {
+        +agent: Any
+        +run(task, env) AgentTrace
+    }
+
     AgentAdapter <|.. LLMAdapter
     AgentAdapter <|.. CallableAdapter
+    AgentAdapter <|.. LangChainAdapter
+    AgentAdapter <|.. OpenAIAgentsAdapter
 ```
 
 - **LLMAdapter** wraps a raw OpenAI-compatible endpoint with a minimal ReAct loop
 - **CallableAdapter** wraps any async Python function, providing instrumented tools
+- **LangChainAdapter** wraps LangChain AgentExecutor or LangGraph CompiledGraph using callback-based instrumentation
+- **OpenAIAgentsAdapter** wraps OpenAI Agents SDK agents using RunHooks-based instrumentation
 
 ### Attack Pipeline
 
 ```mermaid
 flowchart LR
-    Registry[AttackRegistry] -->|loads YAML| Templates[50 Templates]
+    Registry[AttackRegistry] -->|loads YAML| Templates[78 Templates]
     Templates --> Planner[AttackPlanner]
     Config[ScanConfig] --> Planner
     Caps[AgentCapabilities] --> Planner
@@ -125,7 +140,7 @@ flowchart LR
     Event4 --> Trace
 ```
 
-Event types: `LLM_CALL`, `LLM_RESPONSE`, `TOOL_CALL`, `TOOL_RESULT`, `FILE_READ`, `FILE_WRITE`, `NETWORK_REQUEST`, `NETWORK_RESPONSE`, `MEMORY_READ`, `MEMORY_WRITE`, `SECURITY_ALERT`.
+Event types: `LLM_PROMPT`, `LLM_RESPONSE`, `LLM_REASONING`, `TOOL_CALL`, `TOOL_RESULT`, `FILE_READ`, `FILE_WRITE`, `NETWORK_REQUEST`, `NETWORK_RESPONSE`, `MEMORY_READ`, `MEMORY_WRITE`, `SECRET_ACCESS`, `GUARDRAIL_TRIGGER`, `APPROVAL_REQUESTED`.
 
 ### Signal Detection
 
@@ -138,11 +153,17 @@ flowchart TB
     Trace --> IS[InjectionSuccessDetector]
     Trace --> TM[ToolMisuseDetector]
     Trace --> SV[ScopeViolationDetector]
+    Trace --> EA[ExcessiveAgencyDetector]
+    Trace --> IO[InsecureOutputDetector]
+    Trace --> MP[MemoryPoisonDetector]
     SA --> Signals[Signal List]
     EX --> Signals
     IS --> Signals
     TM --> Signals
     SV --> Signals
+    EA --> Signals
+    IO --> Signals
+    MP --> Signals
 ```
 
 | Detector | Targets | What It Detects |
@@ -152,6 +173,9 @@ flowchart TB
 | InjectionSuccessDetector | V1, V2 | Payload echo, unexpected tool calls, task divergence |
 | ToolMisuseDetector | V5 | Dangerous commands (23 patterns), path traversal, SQL injection |
 | ScopeViolationDetector | V1, V2, V3, V5 | Out-of-scope tools, excessive calls |
+| ExcessiveAgencyDetector | V3 | High-impact actions without confirmation, autonomous deploys |
+| InsecureOutputDetector | V4 | XSS, SQL injection, shell injection, template injection in output |
+| MemoryPoisonDetector | V8 | Embedded instructions in memory writes, trust injection |
 
 ### Scoring
 
@@ -208,32 +232,35 @@ erDiagram
 
 ```
 agent_redteam/
-  adapters/           # LLMAdapter, CallableAdapter
+  adapters/           # LLMAdapter, CallableAdapter, LangChainAdapter, OpenAIAgentsAdapter
   attacks/
-    templates/        # 50 YAML attack definitions
-      v01_indirect_injection/
-      v02_direct_injection/
-      v05_tool_misuse/
-      v06_secret_exposure/
-      v07_data_exfiltration/
+    templates/        # 78 YAML attack definitions
+      v01_indirect_injection/   # 12 templates
+      v02_direct_injection/     # 10 templates
+      v03_excessive_agency/     # 10 templates
+      v04_insecure_output/      # 10 templates
+      v05_tool_misuse/          # 10 templates
+      v06_secret_exposure/      # 10 templates
+      v07_data_exfiltration/    # 8 templates
+      v08_memory_poisoning/     # 8 templates
     registry.py       # Loads and indexes templates
     planner.py        # Selects and prioritizes attacks
     executor.py       # Runs attacks against the agent
+    adaptive.py       # Multi-turn adaptive attack executor
   core/
     enums.py          # VulnClass, EventType, SignalTier, etc.
     models.py         # All Pydantic data models
     protocols.py      # AgentAdapter, SignalDetector, etc.
-    events.py         # Event bus for telemetry
     errors.py         # Custom exceptions
-  detectors/          # 5 signal detectors
+  detectors/          # 8 signal detectors
   environments/
     definitions/      # 3 YAML environment definitions
-    builder.py        # EnvironmentBuilder
+    builder.py        # EnvironmentBuilder (files, emails, memory, secrets)
     canary.py         # CanaryTokenGenerator
   pytest_plugin/      # pytest fixture
   reporting/          # JSON, Markdown, Terminal formatters
   runner/
-    scanner.py        # Scanner orchestrator
+    scanner.py        # Scanner orchestrator (single-shot + adaptive)
     budget.py         # BudgetTracker
   scoring/            # ClassScorer, CompositeScorer, statistics
   taxonomy/           # Vulnerability and boundary metadata

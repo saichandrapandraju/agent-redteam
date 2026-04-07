@@ -2,7 +2,7 @@
 
 import pytest
 
-from agent_redteam.core.enums import EventType, SignalTier, VulnClass
+from agent_redteam.core.enums import EventType, SignalTier
 from agent_redteam.core.models import AgentTask, AgentTrace, Event
 from agent_redteam.detectors.tool_misuse import ToolMisuseDetector
 

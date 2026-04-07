@@ -171,3 +171,6 @@ trace.final_output              # Agent's final response text
 | `InjectionSuccessDetector` | Medium | Comparing agent behavior against expected behavior |
 | `ToolMisuseDetector` | Complex | Regex-based command analysis (23 patterns) |
 | `ScopeViolationDetector` | Simple | Comparing actual vs expected tool usage |
+| `ExcessiveAgencyDetector` | Medium | Detecting high-impact actions without user confirmation |
+| `InsecureOutputDetector` | Complex | Multi-pattern regex scanning for XSS, SQLi, shell injection |
+| `MemoryPoisonDetector` | Medium | Detecting instruction injection in memory writes |

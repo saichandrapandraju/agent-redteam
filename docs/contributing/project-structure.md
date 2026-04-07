@@ -39,6 +39,8 @@ The core module contains everything that other modules depend on.
 |---|---|
 | `callable.py` | `CallableAdapter` — wraps any async function, instruments tools with telemetry |
 | `llm.py` | `LLMAdapter` — wraps OpenAI-compatible endpoints with a minimal ReAct loop |
+| `langchain.py` | `LangChainAdapter` — wraps LangChain AgentExecutor/LangGraph via callbacks |
+| `openai_agents.py` | `OpenAIAgentsAdapter` — wraps OpenAI Agents SDK via RunHooks |
 
 ### `agent_redteam/attacks/` — Attack Pipeline
 
@@ -46,8 +48,9 @@ The core module contains everything that other modules depend on.
 |---|---|
 | `registry.py` | `AttackRegistry` — loads YAML templates, indexes by class/stealth/ID |
 | `planner.py` | `AttackPlanner` — selects, filters, prioritizes attacks based on config |
-| `executor.py` | `AttackExecutor` — runs attacks against the agent, collects results |
-| `templates/` | 50 YAML attack definitions organized by vulnerability class |
+| `executor.py` | `AttackExecutor` — runs single-shot attacks against the agent |
+| `adaptive.py` | `AdaptiveExecutor` — multi-turn attacks with attacker LLM follow-ups |
+| `templates/` | 78 YAML attack definitions organized by vulnerability class (V1-V8) |
 
 ### `agent_redteam/environments/` — Synthetic Environments
 
@@ -62,11 +65,14 @@ The core module contains everything that other modules depend on.
 | File | Purpose |
 |---|---|
 | `base.py` | `DetectorRegistry` — manages available detectors |
-| `secret_access.py` | `SecretAccessDetector` — canary tokens, secret file paths |
-| `exfiltration.py` | `ExfiltrationDetector` — unauthorized outbound requests |
-| `injection_success.py` | `InjectionSuccessDetector` — payload echo, task divergence |
-| `tool_misuse.py` | `ToolMisuseDetector` — dangerous commands, path traversal |
-| `scope_violation.py` | `ScopeViolationDetector` — out-of-scope tool usage |
+| `secret_access.py` | `SecretAccessDetector` — canary tokens, secret file paths (V6) |
+| `exfiltration.py` | `ExfiltrationDetector` — unauthorized outbound requests (V7) |
+| `injection_success.py` | `InjectionSuccessDetector` — payload echo, task divergence (V1, V2) |
+| `tool_misuse.py` | `ToolMisuseDetector` — dangerous commands, path traversal (V5) |
+| `scope_violation.py` | `ScopeViolationDetector` — out-of-scope tool usage (V1, V2, V3, V5) |
+| `excessive_agency.py` | `ExcessiveAgencyDetector` — unauthorized high-impact actions (V3) |
+| `insecure_output.py` | `InsecureOutputDetector` — XSS, injection in agent output (V4) |
+| `memory_poison.py` | `MemoryPoisonDetector` — embedded instructions in memory writes (V8) |
 
 ### `agent_redteam/scoring/` — Security Scoring
 
@@ -106,7 +112,8 @@ The core module contains everything that other modules depend on.
 tests/
 ├── core/               # Unit tests for enums, models, environments
 ├── attacks/            # Registry, planner tests
-├── detectors/          # All 5 detectors
+├── adapters/           # Adapter tests (LangChain, OpenAI Agents)
+├── detectors/          # All 8 detectors
 ├── scoring/            # Scorers, confidence intervals
 ├── integration/        # End-to-end scanner tests, pytest plugin
 └── validation/         # Ground-truth tests with mock agents
@@ -117,7 +124,7 @@ tests/
 
 ```mermaid
 flowchart TB
-    YAML["YAML Templates (50)"] --> Registry[AttackRegistry]
+    YAML["YAML Templates (78)"] --> Registry[AttackRegistry]
     Registry --> Planner[AttackPlanner]
     Config[ScanConfig] --> Planner
     Planner --> Suite[AttackSuite]
