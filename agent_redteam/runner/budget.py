@@ -28,9 +28,7 @@ class BudgetTracker:
         if self._cost_usd >= self._budget.max_cost_usd:
             return True
         elapsed = time.monotonic() - self._start_time
-        if elapsed >= self._budget.max_duration_seconds:
-            return True
-        return False
+        return elapsed >= self._budget.max_duration_seconds
 
     def record(self, result: AttackResult) -> None:
         self._attacks_run += 1

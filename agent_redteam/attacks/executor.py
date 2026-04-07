@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 from agent_redteam.core.enums import SignalTier
@@ -81,7 +81,7 @@ class AttackExecutor:
             )
         except TimeoutError:
             trace = AgentTrace(task=task, error="timeout")
-            trace.ended_at = datetime.now(timezone.utc)
+            trace.ended_at = datetime.now(UTC)
             return AttackResult(
                 attack=attack,
                 trace=trace,
@@ -89,7 +89,7 @@ class AttackExecutor:
             )
         except Exception as e:
             trace = AgentTrace(task=task, error=str(e))
-            trace.ended_at = datetime.now(timezone.utc)
+            trace.ended_at = datetime.now(UTC)
             return AttackResult(
                 attack=attack,
                 trace=trace,
@@ -128,14 +128,10 @@ class AttackExecutor:
         attack_id = str(attack.id)
 
         if "emails" in setup:
-            builder.inject_attack_emails(
-                setup["emails"], attack.resolved_payload, attack_id
-            )
+            builder.inject_attack_emails(setup["emails"], attack.resolved_payload, attack_id)
 
         if "files" in setup:
-            builder.inject_attack_files(
-                setup["files"], attack.resolved_payload, attack_id
-            )
+            builder.inject_attack_files(setup["files"], attack.resolved_payload, attack_id)
 
         if "secrets" in setup:
             builder.inject_attack_secrets(setup["secrets"])

@@ -45,11 +45,13 @@ class TerminalFormatter:
             tier_color = TIER_COLORS.get(cs.risk_tier, "white")
             bg_color = tier_color.replace("bold ", "")
             score_text = Text(f" {cs.overall_score:.1f}/100 ", style=f"bold white on {bg_color}")
-            console.print(Panel(
-                score_text,
-                title="[bold]Agent Security Score[/bold]",
-                subtitle=f"Risk: {cs.risk_tier.value.upper()} | Blast Radius: {cs.blast_radius_factor}x",
-            ))
+            console.print(
+                Panel(
+                    score_text,
+                    title="[bold]Agent Security Score[/bold]",
+                    subtitle=f"Risk: {cs.risk_tier.value.upper()} | Blast Radius: {cs.blast_radius_factor}x",
+                )
+            )
 
             if cs.per_class_scores:
                 table = Table(title="Per-Class Scores", show_lines=True)
@@ -72,17 +74,17 @@ class TerminalFormatter:
 
         if result.findings:
             console.print(f"\n[bold]Findings ({len(result.findings)}):[/bold]\n")
-            for i, finding in enumerate(
-                sorted(result.findings, key=lambda f: f.severity.value), 1
-            ):
+            for _i, finding in enumerate(sorted(result.findings, key=lambda f: f.severity.value), 1):
                 sev_color = SEVERITY_COLORS.get(finding.severity, "white")
                 console.print(
                     f"  [{sev_color}]{finding.severity.value.upper()}[/{sev_color}] "
                     f"[bold]{finding.title}[/bold]"
                 )
-                console.print(f"    Class: {finding.vuln_class.value} | "
-                             f"Confidence: {finding.confidence:.0%} | "
-                             f"Tier: {finding.signal_tier.value}")
+                console.print(
+                    f"    Class: {finding.vuln_class.value} | "
+                    f"Confidence: {finding.confidence:.0%} | "
+                    f"Tier: {finding.signal_tier.value}"
+                )
                 if finding.mitigation_guidance:
                     console.print(f"    [dim]Mitigation: {finding.mitigation_guidance}[/dim]")
                 console.print()

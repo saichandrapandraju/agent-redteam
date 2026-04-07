@@ -37,9 +37,7 @@ VULN_CLASS_SEVERITY: dict[VulnClass, Severity] = {
 class CompositeScorer:
     """Aggregates per-class scores, adjusted for blast radius."""
 
-    def __init__(
-        self, weight_overrides: dict[VulnClass, float] | None = None
-    ) -> None:
+    def __init__(self, weight_overrides: dict[VulnClass, float] | None = None) -> None:
         self._weight_overrides = weight_overrides or {}
 
     def score(
@@ -112,9 +110,7 @@ class CompositeScorer:
         severity = VULN_CLASS_SEVERITY.get(vuln_class, Severity.MEDIUM)
         return SEVERITY_WEIGHTS[severity]
 
-    def _confidence_note(
-        self, scores: dict[VulnClass, VulnerabilityScore]
-    ) -> str:
+    def _confidence_note(self, scores: dict[VulnClass, VulnerabilityScore]) -> str:
         low_confidence = [vc for vc, s in scores.items() if s.trial_count < 3]
         if low_confidence:
             classes = ", ".join(vc.value for vc in low_confidence)

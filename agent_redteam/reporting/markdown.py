@@ -36,9 +36,7 @@ class MarkdownFormatter:
                 lines.append("### Per-Class Scores\n")
                 lines.append("| Class | Score | Success Rate | Trials | 90% CI |")
                 lines.append("|-------|-------|-------------|--------|--------|")
-                for vc, vs in sorted(
-                    cs.per_class_scores.items(), key=lambda x: x[1].score
-                ):
+                for vc, vs in sorted(cs.per_class_scores.items(), key=lambda x: x[1].score):
                     lines.append(
                         f"| {vc.value} | {vs.score:.1f} | {vs.attack_success_rate:.1%} "
                         f"| {vs.trial_count} | {vs.ci_lower:.1f}--{vs.ci_upper:.1f} |"
@@ -47,18 +45,14 @@ class MarkdownFormatter:
 
         if result.findings:
             lines.append("## Findings\n")
-            for i, finding in enumerate(
-                sorted(result.findings, key=lambda f: f.severity.value), 1
-            ):
+            for i, finding in enumerate(sorted(result.findings, key=lambda f: f.severity.value), 1):
                 lines.append(f"### Finding {i}: {finding.title}\n")
                 lines.append(f"- **Severity:** {finding.severity.value.upper()}")
                 lines.append(f"- **Class:** {finding.vuln_class.value}")
                 lines.append(f"- **Signal Tier:** {finding.signal_tier.value}")
                 lines.append(f"- **Confidence:** {finding.confidence:.0%}")
                 if finding.trust_boundaries_violated:
-                    boundaries = ", ".join(
-                        b.value for b in finding.trust_boundaries_violated
-                    )
+                    boundaries = ", ".join(b.value for b in finding.trust_boundaries_violated)
                     lines.append(f"- **Trust Boundaries:** {boundaries}")
                 lines.append(f"\n{finding.description}\n")
                 if finding.evidence_timeline:

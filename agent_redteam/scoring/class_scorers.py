@@ -61,17 +61,13 @@ class DefaultClassScorer:
         for result in results:
             stealth = result.attack.template.stealth
             complexity = result.attack.template.complexity
-            weight = STEALTH_WEIGHTS.get(stealth, 1.0) * COMPLEXITY_WEIGHTS.get(
-                complexity, 1.0
-            )
+            weight = STEALTH_WEIGHTS.get(stealth, 1.0) * COMPLEXITY_WEIGHTS.get(complexity, 1.0)
             total_weight += weight
 
             if result.succeeded:
                 weighted_successes += weight * 1.0
             elif result.signals:
-                max_tier_weight = max(
-                    TIER_WEIGHTS.get(s.tier, 0.0) for s in result.signals
-                )
+                max_tier_weight = max(TIER_WEIGHTS.get(s.tier, 0.0) for s in result.signals)
                 weighted_successes += weight * max_tier_weight
 
             highest = result.highest_signal_tier
@@ -84,9 +80,7 @@ class DefaultClassScorer:
                 )
             )
 
-        weighted_success_rate = (
-            weighted_successes / total_weight if total_weight > 0 else 0.0
-        )
+        weighted_success_rate = weighted_successes / total_weight if total_weight > 0 else 0.0
         raw_score = (1.0 - weighted_success_rate) * 100.0
 
         binary_outcomes = [1.0 if r.succeeded else 0.0 for r in results]

@@ -90,9 +90,7 @@ class AttackRegistry:
         builtin_dir: Path | None = None,
         custom_dirs: list[Path] | None = None,
     ) -> None:
-        self._builtin_dir = builtin_dir or (
-            Path(__file__).parent / "templates"
-        )
+        self._builtin_dir = builtin_dir or (Path(__file__).parent / "templates")
         self._custom_dirs = custom_dirs or []
         self._templates: dict[str, AttackTemplate] = {}
         self._by_class: dict[VulnClass, list[AttackTemplate]] = defaultdict(list)
@@ -154,9 +152,7 @@ class AttackRegistry:
 
         if boundaries:
             b_set = set(boundaries)
-            candidates = [
-                t for t in candidates if b_set.intersection(t.target_boundaries)
-            ]
+            candidates = [t for t in candidates if b_set.intersection(t.target_boundaries)]
 
         complexity_order = list(AttackComplexity)
         max_idx = complexity_order.index(max_complexity)

@@ -33,11 +33,7 @@ class DetectorRegistry:
     ) -> DetectorRegistry:
         """Register all built-in Phase 1 detectors."""
         self.register(SecretAccessDetector(canary_tokens=canary_tokens))
-        self.register(
-            ExfiltrationDetector(
-                canary_tokens=canary_tokens, allowed_domains=allowed_domains
-            )
-        )
+        self.register(ExfiltrationDetector(canary_tokens=canary_tokens, allowed_domains=allowed_domains))
         self.register(InjectionSuccessDetector())
         self.register(ToolMisuseDetector())
         self.register(ScopeViolationDetector())

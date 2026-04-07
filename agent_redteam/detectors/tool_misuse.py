@@ -60,9 +60,7 @@ class ToolMisuseDetector:
     def targets(self) -> list[VulnClass]:
         return [VulnClass.V5_TOOL_MISUSE]
 
-    async def analyze(
-        self, trace: AgentTrace, attack: Attack | None = None
-    ) -> list[Signal]:
+    async def analyze(self, trace: AgentTrace, attack: Attack | None = None) -> list[Signal]:
         signals: list[Signal] = []
 
         for event in trace.events:

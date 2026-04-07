@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable
-from datetime import datetime, timezone
-from typing import Any, AsyncIterator
+from collections.abc import AsyncIterator, Callable
+from datetime import UTC, datetime
+from typing import Any
 
 from agent_redteam.core.enums import EventType, TrustBoundary
 from agent_redteam.core.models import (
@@ -56,26 +56,22 @@ class CallableAdapter:
                 timeout=task.timeout_seconds,
             )
             trace.final_output = str(result) if result is not None else None
-        except asyncio.TimeoutError:
+        except TimeoutError:
             trace.error = "timeout"
             raise TimeoutError("Agent timed out") from None
         except Exception as e:
             trace.error = str(e)
         finally:
-            trace.ended_at = datetime.now(timezone.utc)
+            trace.ended_at = datetime.now(UTC)
 
         return trace
 
-    async def run_streaming(
-        self, task: AgentTask, environment: Environment
-    ) -> AsyncIterator[Event]:
+    async def run_streaming(self, task: AgentTask, environment: Environment) -> AsyncIterator[Event]:
         trace = await self.run(task, environment)
         for event in trace.events:
             yield event
 
-    def _build_instrumented_tools(
-        self, environment: Environment, trace: AgentTrace
-    ) -> dict[str, Callable]:
+    def _build_instrumented_tools(self, environment: Environment, trace: AgentTrace) -> dict[str, Callable]:
         """Build a dict of tool_name -> instrumented_callable."""
         tools: dict[str, Callable] = {}
         turn_counter = {"n": 0}
@@ -142,9 +138,7 @@ class CallableAdapter:
         # Build tools synchronously using closures
         for tool_def in environment.tools:
             name = tool_def.name
-            tools[name] = _make_instrumented_tool(
-                name, trace, turn_counter, file_map, environment
-            )
+            tools[name] = _make_instrumented_tool(name, trace, turn_counter, file_map, environment)
 
         # Add email-reading tool if emails exist
         if environment.emails:
@@ -210,9 +204,7 @@ def _make_instrumented_tool(
     return instrumented_tool
 
 
-def _make_email_reader(
-    environment: Environment, trace: AgentTrace, turn_counter: dict
-) -> Callable:
+def _make_email_reader(environment: Environment, trace: AgentTrace, turn_counter: dict) -> Callable:
     async def read_emails(**kwargs: Any) -> str:
         turn_counter["n"] += 1
         turn = turn_counter["n"]
@@ -230,10 +222,7 @@ def _make_email_reader(
         email_texts = []
         for email in environment.emails:
             email_texts.append(
-                f"From: {email.from_addr}\n"
-                f"To: {email.to_addr}\n"
-                f"Subject: {email.subject}\n\n"
-                f"{email.body}"
+                f"From: {email.from_addr}\nTo: {email.to_addr}\nSubject: {email.subject}\n\n{email.body}"
             )
         result = "\n---\n".join(email_texts) if email_texts else "No emails."
 
@@ -252,9 +241,7 @@ def _make_email_reader(
     return read_emails
 
 
-def _simulate_tool(
-    name: str, kwargs: dict, file_map: dict, environment: Environment
-) -> Any:
+def _simulate_tool(name: str, kwargs: dict, file_map: dict, environment: Environment) -> Any:
     """Simulate tool execution against the synthetic environment."""
     if name in ("file_read", "read_file"):
         path = kwargs.get("path", "")

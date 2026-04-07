@@ -26,8 +26,7 @@ VULN_METADATA: dict[VulnClass, dict] = {
     VulnClass.V3_EXCESSIVE_AGENCY: {
         "name": "Excessive Agency",
         "description": (
-            "Agent possesses more permissions, tools, or autonomy "
-            "than required for its intended tasks."
+            "Agent possesses more permissions, tools, or autonomy than required for its intended tasks."
         ),
         "severity": Severity.CRITICAL,
         "owasp": "Excessive Agency",
@@ -55,10 +54,7 @@ VULN_METADATA: dict[VulnClass, dict] = {
     },
     VulnClass.V6_SECRET_EXPOSURE: {
         "name": "Secret/Credential Exposure",
-        "description": (
-            "Agent accesses, processes, or transmits secrets beyond "
-            "what the task requires."
-        ),
+        "description": ("Agent accesses, processes, or transmits secrets beyond what the task requires."),
         "severity": Severity.CRITICAL,
         "owasp": "Insecure Tool Integration",
         "mitre": "AML.T0035",

@@ -40,9 +40,7 @@ def compute_confidence_interval(
     z = _Z_TABLE.get(confidence_level, 1.645)
     denominator = 1 + z**2 / n
     center = (p_hat + z**2 / (2 * n)) / denominator
-    margin = (z / denominator) * math.sqrt(
-        p_hat * (1 - p_hat) / n + z**2 / (4 * n**2)
-    )
+    margin = (z / denominator) * math.sqrt(p_hat * (1 - p_hat) / n + z**2 / (4 * n**2))
 
     ci_lower = max(0.0, center - margin)
     ci_upper = min(1.0, center + margin)

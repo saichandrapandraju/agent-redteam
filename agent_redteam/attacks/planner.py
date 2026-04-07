@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 from typing import TYPE_CHECKING
 
 from jinja2 import Environment as JinjaEnvironment
@@ -58,9 +59,7 @@ class AttackPlanner:
         templates = self._registry.query(
             vuln_classes=config.vuln_classes or None,
             boundaries=config.target_boundaries or None,
-            max_complexity=max(config.complexity_levels)
-            if config.complexity_levels
-            else None,
+            max_complexity=max(config.complexity_levels) if config.complexity_levels else None,
             stealth_levels=config.stealth_levels or None,
         )
 
@@ -71,9 +70,7 @@ class AttackPlanner:
         attacks = [self._instantiate(t) for t in templates]
 
         vuln_classes = list({a.template.vuln_class for a in attacks})
-        boundaries = list(
-            {b for a in attacks for b in a.template.target_boundaries}
-        )
+        boundaries = list({b for a in attacks for b in a.template.target_boundaries})
 
         return AttackSuite(
             name=f"scan_{config.profile.value}",
@@ -120,9 +117,7 @@ class AttackPlanner:
             ),
         )
 
-    def _apply_budget(
-        self, templates: list[AttackTemplate], budget: BudgetConfig
-    ) -> list[AttackTemplate]:
+    def _apply_budget(self, templates: list[AttackTemplate], budget: BudgetConfig) -> list[AttackTemplate]:
         """Trim to budget.max_attacks while preserving class coverage."""
         if len(templates) <= budget.max_attacks:
             return templates
@@ -167,10 +162,8 @@ class AttackPlanner:
 
         task_instruction = template.agent_task_template
         if task_instruction:
-            try:
+            with contextlib.suppress(Exception):
                 task_instruction = self._jinja.from_string(task_instruction).render(**params)
-            except Exception:
-                pass
 
         task = AgentTask(
             instruction=task_instruction,

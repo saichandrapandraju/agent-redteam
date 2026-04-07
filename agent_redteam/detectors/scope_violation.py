@@ -34,9 +34,7 @@ class ScopeViolationDetector:
             VulnClass.V2_DIRECT_INJECTION,
         ]
 
-    async def analyze(
-        self, trace: AgentTrace, attack: Attack | None = None
-    ) -> list[Signal]:
+    async def analyze(self, trace: AgentTrace, attack: Attack | None = None) -> list[Signal]:
         signals: list[Signal] = []
         tool_calls = trace.tool_calls()
         expected_tools = set(trace.task.expected_tools) if trace.task.expected_tools else set()
@@ -89,8 +87,7 @@ class ScopeViolationDetector:
                         trust_boundary=TrustBoundary.B4_AGENT_TO_TOOL,
                         detector_name=self.name,
                         description=(
-                            f"High-risk tools used outside scope: "
-                            f"{', '.join(sorted(used_high_risk))}"
+                            f"High-risk tools used outside scope: {', '.join(sorted(used_high_risk))}"
                         ),
                         confidence=0.65,
                     )

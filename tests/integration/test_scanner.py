@@ -81,9 +81,9 @@ async def test_report_generation():
     scanner = Scanner(adapter, config)
     result = await scanner.run()
 
-    markdown = scanner.report(result, format="markdown")
+    markdown = scanner.report(result, fmt="markdown")
     assert "# Agent Security Scan Report" in markdown
     assert "Score" in markdown
 
-    json_report = scanner.report(result, format="json")
+    json_report = scanner.report(result, fmt="json")
     assert '"composite_score"' in json_report

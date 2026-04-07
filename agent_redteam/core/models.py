@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -65,7 +65,7 @@ class Event(BaseModel):
     """A single telemetry event captured during agent execution."""
 
     id: UUID = Field(default_factory=uuid4)
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
     event_type: EventType
     trust_boundary: TrustBoundary | None = None
 
@@ -86,7 +86,7 @@ class AgentTrace(BaseModel):
     id: UUID = Field(default_factory=uuid4)
     task: AgentTask
     events: list[Event] = Field(default_factory=list)
-    started_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    started_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     ended_at: datetime | None = None
     final_output: str | None = None
     error: str | None = None
@@ -402,9 +402,7 @@ class ScanConfig(BaseModel):
     def quick(cls, **kwargs: Any) -> ScanConfig:
         return cls(
             profile=ScanProfile.QUICK,
-            budget=BudgetConfig(
-                max_duration_seconds=900, max_attacks=50, trials_per_attack=1
-            ),
+            budget=BudgetConfig(max_duration_seconds=900, max_attacks=50, trials_per_attack=1),
             stealth_levels=[StealthLevel.OBVIOUS],
             complexity_levels=[AttackComplexity.L1_SINGLE_TURN],
             **kwargs,
@@ -414,9 +412,7 @@ class ScanConfig(BaseModel):
     def release_gate(cls, **kwargs: Any) -> ScanConfig:
         return cls(
             profile=ScanProfile.RELEASE_GATE,
-            budget=BudgetConfig(
-                max_duration_seconds=3600, max_attacks=200, trials_per_attack=3
-            ),
+            budget=BudgetConfig(max_duration_seconds=3600, max_attacks=200, trials_per_attack=3),
             stealth_levels=[StealthLevel.OBVIOUS, StealthLevel.SUBTLE],
             complexity_levels=[
                 AttackComplexity.L1_SINGLE_TURN,
@@ -429,9 +425,7 @@ class ScanConfig(BaseModel):
     def deep_red_team(cls, **kwargs: Any) -> ScanConfig:
         return cls(
             profile=ScanProfile.DEEP_RED_TEAM,
-            budget=BudgetConfig(
-                max_duration_seconds=28800, max_attacks=500, trials_per_attack=5
-            ),
+            budget=BudgetConfig(max_duration_seconds=28800, max_attacks=500, trials_per_attack=5),
             stealth_levels=list(StealthLevel),
             complexity_levels=list(AttackComplexity),
             **kwargs,
@@ -443,7 +437,7 @@ class ScanResult(BaseModel):
 
     id: UUID = Field(default_factory=uuid4)
     config: ScanConfig
-    started_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    started_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     ended_at: datetime | None = None
     composite_score: CompositeScore | None = None
     findings: list[Finding] = Field(default_factory=list)

@@ -57,17 +57,13 @@ class EnvironmentBuilder:
 
     # -- Files ---------------------------------------------------------------
 
-    def add_file(
-        self, path: str, content: str, is_secret: bool = False
-    ) -> EnvironmentBuilder:
+    def add_file(self, path: str, content: str, is_secret: bool = False) -> EnvironmentBuilder:
         self._files.append(FileEntry(path=path, content=content, is_secret=is_secret))
         return self
 
     # -- Canary secrets ------------------------------------------------------
 
-    def add_canary_secrets(
-        self, tokens: list[CanaryToken] | None = None
-    ) -> EnvironmentBuilder:
+    def add_canary_secrets(self, tokens: list[CanaryToken] | None = None) -> EnvironmentBuilder:
         if tokens is None:
             tokens = CanaryTokenGenerator().generate_standard_set()
         self._canaries.extend(tokens)
@@ -149,9 +145,7 @@ class EnvironmentBuilder:
             )
         return self
 
-    def inject_attack_secrets(
-        self, secrets_config: list[dict[str, Any]]
-    ) -> EnvironmentBuilder:
+    def inject_attack_secrets(self, secrets_config: list[dict[str, Any]]) -> EnvironmentBuilder:
         """Seed canary secrets specified by the attack template."""
         gen = CanaryTokenGenerator()
         for secret_def in secrets_config:

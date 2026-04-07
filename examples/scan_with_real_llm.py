@@ -61,10 +61,10 @@ async def main():
 
     result = await scanner.run(on_progress=on_progress)
 
-    print("\n" + scanner.report(result, format="markdown"))
+    print("\n" + scanner.report(result, fmt="markdown"))
 
     with open("scan_result.json", "w") as f:
-        f.write(scanner.report(result, format="json"))
+        f.write(scanner.report(result, fmt="json"))
     print("JSON report saved to scan_result.json")
 
 

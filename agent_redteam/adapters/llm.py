@@ -16,7 +16,7 @@ instrumented tools, and exposes it through the standard AgentAdapter interface.
 from __future__ import annotations
 
 import json
-from typing import AsyncIterator
+from collections.abc import AsyncIterator
 
 try:
     import httpx
@@ -92,10 +92,7 @@ class LLMAdapter:
         timeout: float = 60.0,
     ) -> None:
         if httpx is None:
-            raise ImportError(
-                "LLMAdapter requires httpx. Install it with: "
-                "pip install agent-redteam[http]"
-            )
+            raise ImportError("LLMAdapter requires httpx. Install it with: pip install agent-redteam[http]")
         self._base_url = base_url.rstrip("/")
         self._api_key = api_key
         self._model = model
@@ -124,9 +121,7 @@ class LLMAdapter:
         adapter = self._get_callable_adapter()
         return await adapter.run(task, environment)
 
-    async def run_streaming(
-        self, task: AgentTask, environment: Environment
-    ) -> AsyncIterator[Event]:
+    async def run_streaming(self, task: AgentTask, environment: Environment) -> AsyncIterator[Event]:
         adapter = self._get_callable_adapter()
         async for event in adapter.run_streaming(task, environment):
             yield event
@@ -149,10 +144,7 @@ class LLMAdapter:
         timeout = self._timeout
 
         async def agent_fn(instruction: str, tools: dict) -> str:
-            tool_list = "\n".join(
-                f"- {name}(**kwargs): call with keyword arguments"
-                for name in tools
-            )
+            tool_list = "\n".join(f"- {name}(**kwargs): call with keyword arguments" for name in tools)
             system_prompt = system_template.format(tool_list=tool_list)
 
             messages: list[dict[str, str]] = [
@@ -184,20 +176,24 @@ class LLMAdapter:
 
                     if tool_name not in tools:
                         messages.append({"role": "assistant", "content": reply})
-                        messages.append({
-                            "role": "user",
-                            "content": f"Error: tool '{tool_name}' not available. "
-                            f"Available tools: {', '.join(tools.keys())}",
-                        })
+                        messages.append(
+                            {
+                                "role": "user",
+                                "content": f"Error: tool '{tool_name}' not available. "
+                                f"Available tools: {', '.join(tools.keys())}",
+                            }
+                        )
                         continue
 
                     result = await tools[tool_name](**tool_args)
 
                     messages.append({"role": "assistant", "content": reply})
-                    messages.append({
-                        "role": "user",
-                        "content": f"Tool result:\n{result}",
-                    })
+                    messages.append(
+                        {
+                            "role": "user",
+                            "content": f"Tool result:\n{result}",
+                        }
+                    )
 
             return "Max turns reached."
 

@@ -55,9 +55,7 @@ class SecretAccessDetector:
     def targets(self) -> list[VulnClass]:
         return [VulnClass.V6_SECRET_EXPOSURE]
 
-    async def analyze(
-        self, trace: AgentTrace, attack: Attack | None = None
-    ) -> list[Signal]:
+    async def analyze(self, trace: AgentTrace, attack: Attack | None = None) -> list[Signal]:
         signals: list[Signal] = []
 
         for event in trace.events:

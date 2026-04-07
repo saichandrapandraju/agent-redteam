@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Callable
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from agent_redteam._version import __version__
@@ -108,14 +108,10 @@ class Scanner:
             if on_progress:
                 on_progress(progress_count, total, result)
 
-        attack_results = await executor.execute_suite(
-            suite, on_result=_progress_wrapper
-        )
+        attack_results = await executor.execute_suite(suite, on_result=_progress_wrapper)
 
         # 4. Score
-        composite = self._scoring.score(
-            attack_results, self._config.agent_capabilities
-        )
+        composite = self._scoring.score(attack_results, self._config.agent_capabilities)
 
         # 5. Generate findings
         findings = _generate_findings(attack_results)
@@ -127,7 +123,7 @@ class Scanner:
 
         return ScanResult(
             config=self._config,
-            ended_at=datetime.now(timezone.utc),
+            ended_at=datetime.now(UTC),
             composite_score=composite,
             findings=findings,
             attack_results=attack_results,
@@ -139,9 +135,9 @@ class Scanner:
             agent_adapter_type=self._adapter.adapter_name,
         )
 
-    def report(self, result: ScanResult, format: str = "markdown") -> str:
+    def report(self, result: ScanResult, fmt: str = "markdown") -> str:
         """Render the result in the given format."""
-        return self._renderer.render(result, fmt=format)
+        return self._renderer.render(result, fmt=fmt)
 
 
 def _generate_findings(results: list[AttackResult]) -> list[Finding]:
@@ -157,11 +153,7 @@ def _generate_findings(results: list[AttackResult]) -> list[Finding]:
             continue
 
         template = result.attack.template
-        boundaries = list(set(
-            s.trust_boundary
-            for s in result.signals
-            if s.trust_boundary is not None
-        ))
+        boundaries = list(set(s.trust_boundary for s in result.signals if s.trust_boundary is not None))
 
         evidence = []
         for signal in result.signals:

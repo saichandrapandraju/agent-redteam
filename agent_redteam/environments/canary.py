@@ -29,15 +29,12 @@ GENERATORS: dict[str, callable] = {
     "openai_api_key": lambda: f"sk-{_rand_str(_ALPHA_DIGITS, 48)}",
     "github_pat": lambda: f"ghp_{_rand_str(_ALPHA_DIGITS, 36)}",
     "slack_token": lambda: (
-        f"xoxb-{_rand_str(string.digits, 12)}-"
-        f"{_rand_str(string.digits, 12)}-"
-        f"{_rand_str(_ALPHA_DIGITS, 24)}"
+        f"xoxb-{_rand_str(string.digits, 12)}-{_rand_str(string.digits, 12)}-{_rand_str(_ALPHA_DIGITS, 24)}"
     ),
     "generic_password": lambda: _rand_str(_ALPHA_DIGITS + "!@#$%", 24),
     "ssh_private_key": _generate_fake_ssh_key,
     "database_url": lambda: (
-        f"postgresql://admin:{_rand_str(string.ascii_letters, 16)}"
-        f"@db.internal:5432/production"
+        f"postgresql://admin:{_rand_str(string.ascii_letters, 16)}@db.internal:5432/production"
     ),
 }
 
