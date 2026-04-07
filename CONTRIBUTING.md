@@ -6,7 +6,7 @@ Thank you for your interest in contributing to agent-redteam! This document cove
 
 ```bash
 # Clone the repository
-git clone https://github.com/spandraj/agent-redteam.git
+git clone https://github.com/saichandrapandraju/agent-redteam.git
 cd agent-redteam
 
 # Create a virtual environment
@@ -65,16 +65,16 @@ mypy agent_redteam/
 
 The most impactful contributions right now:
 
-- **New attack templates** — see [Adding Templates](https://spandraj.github.io/agent-redteam/contributing/adding-templates/)
-- **New detectors** — see [Adding Detectors](https://spandraj.github.io/agent-redteam/contributing/adding-detectors/)
-- **New adapters** — see [Adding Adapters](https://spandraj.github.io/agent-redteam/contributing/adding-adapters/)
+- **New attack templates** — see [Adding Templates](https://saichandrapandraju.github.io/agent-redteam/contributing/adding-templates/)
+- **New detectors** — see [Adding Detectors](https://saichandrapandraju.github.io/agent-redteam/contributing/adding-detectors/)
+- **New adapters** — see [Adding Adapters](https://saichandrapandraju.github.io/agent-redteam/contributing/adding-adapters/)
 - **Bug fixes** and **test improvements**
 - **Documentation** improvements
 
 ## Project Structure
 
-See the full [Project Structure](https://spandraj.github.io/agent-redteam/contributing/project-structure/) guide for a detailed walkthrough of every module.
+See the full [Project Structure](https://saichandrapandraju.github.io/agent-redteam/contributing/project-structure/) guide for a detailed walkthrough of every module.
 
 ## Questions?
 
-Open a [GitHub Discussion](https://github.com/spandraj/agent-redteam/discussions) or an issue.
+Open a [GitHub Discussion](https://github.com/saichandrapandraju/agent-redteam/discussions) or an issue.

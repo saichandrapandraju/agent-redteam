@@ -1,8 +1,8 @@
 site_name: agent-redteam
-site_url: https://spandraj.github.io/agent-redteam
+site_url: https://saichandrapandraju.github.io/agent-redteam
 site_description: Open-source Python library for automated vulnerability assessment of LLM agents
-repo_url: https://github.com/spandraj/agent-redteam
-repo_name: spandraj/agent-redteam
+repo_url: https://github.com/saichandrapandraju/agent-redteam
+repo_name: saichandrapandraju/agent-redteam
 edit_uri: edit/main/docs/
 
 theme:
@@ -79,4 +79,4 @@ nav:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/spandraj/agent-redteam
+      link: https://github.com/saichandrapandraju/agent-redteam

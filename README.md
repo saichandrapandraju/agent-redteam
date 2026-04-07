@@ -8,7 +8,7 @@
 
 agent-redteam probes AI agents and language models for security vulnerabilities — prompt injection, secret exposure, tool misuse, data exfiltration — and produces scored, actionable reports.
 
-**[Documentation](https://spandraj.github.io/agent-redteam)** | **[Getting Started](https://spandraj.github.io/agent-redteam/getting-started/)** | **[Contributing](CONTRIBUTING.md)**
+**[Documentation](https://saichandrapandraju.github.io/agent-redteam)** | **[Getting Started](https://saichandrapandraju.github.io/agent-redteam/getting-started/)** | **[Contributing](CONTRIBUTING.md)**
 
 ---
 
@@ -78,7 +78,7 @@ pytest tests/ -v                # 83 tests
 ruff check agent_redteam/       # Lint
 ```
 
-See the [full documentation](https://spandraj.github.io/agent-redteam) for architecture details, configuration reference, and contributor guides.
+See the [full documentation](https://saichandrapandraju.github.io/agent-redteam) for architecture details, configuration reference, and contributor guides.
 
 ## License
 

@@ -5,7 +5,7 @@ Welcome! agent-redteam is an open-source project and contributions are encourage
 ## Quick Start
 
 ```bash
-git clone https://github.com/spandraj/agent-redteam.git
+git clone https://github.com/saichandrapandraju/agent-redteam.git
 cd agent-redteam
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev,http,rich]"
@@ -72,5 +72,5 @@ Adapters integrate new agent frameworks (LangChain, CrewAI, AutoGen, etc.) with 
 
 ## Questions?
 
-- [GitHub Discussions](https://github.com/spandraj/agent-redteam/discussions) for questions and ideas
-- [GitHub Issues](https://github.com/spandraj/agent-redteam/issues) for bug reports and feature requests
+- [GitHub Discussions](https://github.com/saichandrapandraju/agent-redteam/discussions) for questions and ideas
+- [GitHub Issues](https://github.com/saichandrapandraju/agent-redteam/issues) for bug reports and feature requests

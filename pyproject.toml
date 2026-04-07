@@ -21,10 +21,10 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/spandraj/agent-redteam"
-Documentation = "https://spandraj.github.io/agent-redteam"
-Repository = "https://github.com/spandraj/agent-redteam"
-Issues = "https://github.com/spandraj/agent-redteam/issues"
+Homepage = "https://github.com/saichandrapandraju/agent-redteam"
+Documentation = "https://saichandrapandraju.github.io/agent-redteam"
+Repository = "https://github.com/saichandrapandraju/agent-redteam"
+Issues = "https://github.com/saichandrapandraju/agent-redteam/issues"
 dependencies = [
     "pydantic>=2.0",
     "pyyaml>=6.0",

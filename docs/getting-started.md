@@ -11,7 +11,7 @@ This guide takes you from zero to your first security scan in under 5 minutes.
 
 ```bash
 # Clone the repository
-git clone https://github.com/spandraj/agent-redteam.git
+git clone https://github.com/saichandrapandraju/agent-redteam.git
 cd agent-redteam
 
 # Install with HTTP support (needed for LLMAdapter)

@@ -90,4 +90,4 @@ See the [Getting Started](getting-started.md) guide for the full walkthrough.
 
 ## License
 
-Apache 2.0 — see [LICENSE](https://github.com/spandraj/agent-redteam/blob/main/LICENSE).
+Apache 2.0 — see [LICENSE](https://github.com/saichandrapandraju/agent-redteam/blob/main/LICENSE).
