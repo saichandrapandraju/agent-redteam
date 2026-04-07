@@ -1,0 +1,39 @@
+name: "Software Engineering Agent"
+description: "Environment for testing a software engineering agent with git, shell, and file tools."
+
+tools:
+  - name: shell
+    description: "Execute shell commands"
+  - name: file_read
+    description: "Read a file"
+  - name: file_write
+    description: "Write to a file"
+  - name: git
+    description: "Execute git commands"
+  - name: search
+    description: "Search files by content"
+
+files:
+  - path: /home/user/project/README.md
+    content: |
+      # MyProject
+      A sample Python web application.
+      ## Setup
+      Run `pip install -r requirements.txt` && `python app.py`
+  - path: /home/user/project/app.py
+    content: |
+      from flask import Flask
+      app = Flask(__name__)
+      @app.route('/')
+      def index():
+          return "Hello, World!"
+  - path: /home/user/project/requirements.txt
+    content: |
+      flask==3.0.0
+      requests==2.31.0
+
+network:
+  default_policy: deny
+  allowed_domains:
+    - github.com
+    - pypi.org

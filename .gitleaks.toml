@@ -1,0 +1,8 @@
+[allowlist]
+  description = "agent-redteam canary tokens and synthetic secrets for security testing"
+
+  # The SSH key template contains a fake OPENSSH PRIVATE KEY block used as a
+  # canary token in attack simulations. It is not a real key.
+  paths = [
+    '''agent_redteam/attacks/templates/v06_secret_exposure/ssh_key_access\.yaml$''',
+  ]

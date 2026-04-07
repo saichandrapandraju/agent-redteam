@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+*.egg
+dist/
+build/
+*.whl
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+
+# Linting
+.ruff_cache/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Scan outputs
+scan_result.json
+scan_result.md
+*.log
+
+# MkDocs build
+site/
+
+# OS
+Thumbs.db
