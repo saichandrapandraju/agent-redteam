@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from collections import defaultdict
 from collections.abc import Callable
 from datetime import UTC, datetime
@@ -27,6 +28,8 @@ from agent_redteam.taxonomy.vulns import get_vuln_name, get_vuln_severity
 
 if TYPE_CHECKING:
     from agent_redteam.core.protocols import AgentAdapter, SignalDetector
+
+logger = logging.getLogger("agent_redteam.scanner")
 
 
 class Scanner:
@@ -87,14 +90,22 @@ class Scanner:
     ) -> ScanResult:
         """Execute the full scan pipeline."""
         # 1. Health check
+        logger.info("Running health check on adapter '%s'", self._adapter.adapter_name)
         if not await self._adapter.health_check():
             from agent_redteam.core.errors import ScanError
 
             raise ScanError("Agent health check failed")
+        logger.info("Health check passed")
 
         # 2. Plan attacks
+        logger.info(
+            "Planning attacks (profile=%s, classes=%s)",
+            self._config.profile.value,
+            [v.value for v in self._config.vuln_classes],
+        )
         planner = AttackPlanner(self._registry)
         suite = planner.plan(self._config)
+        logger.info("Planned %d attacks across %d vuln classes", len(suite.attacks), len(suite.vuln_classes))
 
         # 3. Execute attacks (use adaptive executor if configured and complexity allows)
         use_adaptive = (
@@ -131,13 +142,25 @@ class Scanner:
             if on_progress:
                 on_progress(progress_count, total, result)
 
+        logger.info(
+            "Executing attacks (budget=%d, trials=%d)",
+            self._config.budget.max_attacks,
+            self._config.budget.trials_per_attack,
+        )
         attack_results = await executor.execute_suite(suite, on_result=_progress_wrapper)
+        logger.info(
+            "Execution complete: %d results, %d succeeded",
+            len(attack_results),
+            sum(1 for r in attack_results if r.succeeded),
+        )
 
         # 4. Score
         composite = self._scoring.score(attack_results, self._config.agent_capabilities)
+        logger.info("Scoring complete: %.1f/100, tier=%s", composite.overall_score, composite.risk_tier)
 
         # 5. Generate findings
         findings = _generate_findings(attack_results)
+        logger.info("Generated %d findings", len(findings))
 
         # 6. Build result
         coverage: dict[VulnClass, int] = defaultdict(int)

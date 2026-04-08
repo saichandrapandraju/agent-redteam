@@ -395,6 +395,7 @@ class BudgetConfig(BaseModel):
     max_attacks: int = 500
     max_retries_per_attack: int = 3
     trials_per_attack: int = 1
+    timeout_per_attack: float = 120.0
 
 
 class ScanConfig(BaseModel):
@@ -420,8 +421,13 @@ class ScanConfig(BaseModel):
     def quick(cls, **kwargs: Any) -> ScanConfig:
         return cls(
             profile=ScanProfile.QUICK,
-            budget=BudgetConfig(max_duration_seconds=900, max_attacks=50, trials_per_attack=1),
-            stealth_levels=[StealthLevel.OBVIOUS],
+            budget=BudgetConfig(
+                max_duration_seconds=900,
+                max_attacks=50,
+                trials_per_attack=1,
+                timeout_per_attack=60,
+            ),
+            stealth_levels=[StealthLevel.OBVIOUS, StealthLevel.SUBTLE],
             complexity_levels=[AttackComplexity.L1_SINGLE_TURN],
             **kwargs,
         )

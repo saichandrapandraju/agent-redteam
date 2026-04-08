@@ -16,6 +16,7 @@ instrumented tools, and exposes it through the standard AgentAdapter interface.
 from __future__ import annotations
 
 import json
+import logging
 from collections.abc import AsyncIterator
 
 try:
@@ -25,6 +26,8 @@ except ImportError:
 
 from agent_redteam.adapters.callable import CallableAdapter
 from agent_redteam.core.models import AgentTask, AgentTrace, Environment, Event
+
+logger = logging.getLogger("agent_redteam.adapters.llm")
 
 _DEFAULT_SYSTEM_PROMPT = (
     "You are a helpful assistant. You have access to the following tools:\n"
@@ -113,8 +116,11 @@ class LLMAdapter:
                     f"{self._base_url}/models",
                     headers={"Authorization": f"Bearer {self._api_key}"},
                 )
-                return r.status_code == 200
-        except Exception:
+                ok = r.status_code == 200
+                logger.debug("Health check %s -> %d", self._base_url, r.status_code)
+                return ok
+        except Exception as e:
+            logger.warning("Health check failed: %s", e)
             return False
 
     async def run(self, task: AgentTask, environment: Environment) -> AgentTrace:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import logging
 from typing import TYPE_CHECKING
 
 from jinja2 import Environment as JinjaEnvironment
@@ -20,6 +21,8 @@ from agent_redteam.core.models import (
 
 if TYPE_CHECKING:
     from agent_redteam.attacks.registry import AttackRegistry
+
+logger = logging.getLogger("agent_redteam.planner")
 
 SEVERITY_PRIORITY = {
     Severity.CRITICAL: 0,
@@ -70,15 +73,24 @@ class AttackPlanner:
             max_complexity=max(config.complexity_levels) if config.complexity_levels else None,
             stealth_levels=config.stealth_levels or None,
         )
+        logger.debug("Registry query returned %d templates", len(templates))
 
         templates = self._filter_by_capabilities(templates, config.agent_capabilities)
+        logger.debug("After capability filter: %d templates", len(templates))
+
         templates = self._prioritize(templates)
         templates = self._apply_budget(templates, config.budget)
+        logger.debug("After budget cap: %d templates", len(templates))
 
-        attacks = [self._instantiate(t) for t in templates]
+        attacks = [self._instantiate(t, config.budget) for t in templates]
 
         vuln_classes = list({a.template.vuln_class for a in attacks})
         boundaries = list({b for a in attacks for b in a.template.target_boundaries})
+
+        logger.info(
+            "Plan: %d attacks, classes=%s",
+            len(attacks), [v.value for v in vuln_classes],
+        )
 
         return AttackSuite(
             name=f"scan_{config.profile.value}",
@@ -157,7 +169,7 @@ class AttackPlanner:
 
         return selected
 
-    def _instantiate(self, template: AttackTemplate) -> Attack:
+    def _instantiate(self, template: AttackTemplate, budget: BudgetConfig | None = None) -> Attack:
         """Create an Attack from a template with resolved parameters."""
         params = {
             "secret_file_path": "/home/user/.aws/credentials",
@@ -178,9 +190,12 @@ class AttackPlanner:
             with contextlib.suppress(Exception):
                 task_instruction = self._jinja.from_string(task_instruction).render(**params)
 
+        timeout = budget.timeout_per_attack if budget else 120.0
+
         task = AgentTask(
             instruction=task_instruction,
             expected_tools=[],
+            timeout_seconds=timeout,
         )
 
         return Attack(

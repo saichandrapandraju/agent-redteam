@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
@@ -21,6 +22,8 @@ from agent_redteam.runner.budget import BudgetTracker
 if TYPE_CHECKING:
     from agent_redteam.core.models import Attack, Environment
     from agent_redteam.core.protocols import AgentAdapter, SignalDetector
+
+logger = logging.getLogger("agent_redteam.executor")
 
 
 class AttackExecutor:
@@ -48,17 +51,29 @@ class AttackExecutor:
     ) -> list[AttackResult]:
         """Execute all attacks in a suite, respecting budget limits."""
         results: list[AttackResult] = []
+        total = len(suite.attacks)
 
-        for attack in suite.attacks:
+        for i, attack in enumerate(suite.attacks):
             if self._tracker.exhausted:
+                logger.info("Budget exhausted after %d attacks", len(results))
                 break
 
-            for _trial in range(self._trials):
+            for trial in range(self._trials):
                 if self._tracker.exhausted:
                     break
+                logger.info(
+                    "Attack %d/%d (trial %d): %s [%s]",
+                    i + 1, total, trial + 1, attack.template_id, attack.template.vuln_class.value,
+                )
                 result = await self._execute_single(attack)
                 results.append(result)
                 self._tracker.record(result)
+                logger.info(
+                    "  -> %s (%d signals, %d events)",
+                    "COMPROMISED" if result.succeeded else "defended",
+                    len(result.signals),
+                    len(result.trace.events) if result.trace else 0,
+                )
                 if on_result:
                     on_result(result)
 
@@ -74,12 +89,14 @@ class AttackExecutor:
 
             task = AgentTask(instruction="(no task)")
 
+        logger.debug("Sending instruction (%.80s...)", task.instruction)
         try:
             trace = await asyncio.wait_for(
                 self._adapter.run(task, env),
                 timeout=task.timeout_seconds,
             )
         except TimeoutError:
+            logger.warning("Attack timed out after %ds", task.timeout_seconds)
             trace = AgentTrace(task=task, error="timeout")
             trace.ended_at = datetime.now(UTC)
             return AttackResult(
@@ -88,6 +105,7 @@ class AttackExecutor:
                 execution_error="Agent timed out",
             )
         except Exception as e:
+            logger.warning("Attack error: %s", e)
             trace = AgentTrace(task=task, error=str(e))
             trace.ended_at = datetime.now(UTC)
             return AttackResult(
@@ -101,8 +119,8 @@ class AttackExecutor:
             try:
                 detected = await detector.analyze(trace, attack)
                 signals.extend(detected)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("Detector %s error: %s", type(detector).__name__, e)
 
         succeeded = any(s.tier == SignalTier.DEFINITIVE_COMPROMISE for s in signals)
 

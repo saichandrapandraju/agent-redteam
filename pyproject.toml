@@ -59,6 +59,7 @@ testpaths = ["tests"]
 markers = [
     "validation: ground-truth validation tests",
     "performance: performance benchmark tests",
+    "real_llm: integration tests requiring a live LLM endpoint (set BASE_URL env var)",
 ]
 
 [tool.mypy]

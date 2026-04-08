@@ -14,6 +14,7 @@ tool calls via LangChain's callback system to build a full ``AgentTrace``.
 from __future__ import annotations
 
 import asyncio
+import logging
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
@@ -33,6 +34,8 @@ try:
     from langchain_core.callbacks import AsyncCallbackHandler
 except ImportError:
     AsyncCallbackHandler = None  # type: ignore[assignment, misc]
+
+logger = logging.getLogger("agent_redteam.adapters.langchain")
 
 
 class _TraceCallbackHandler:
@@ -192,12 +195,14 @@ class LangChainAdapter:
         output_key: str = "output",
         is_langgraph: bool = False,
         name: str = "langchain_agent",
+        recursion_limit: int = 25,
     ) -> None:
         self._runnable = runnable
         self._input_key = input_key
         self._output_key = output_key
         self._is_langgraph = is_langgraph
         self._name = name
+        self._recursion_limit = recursion_limit
 
     @property
     def adapter_name(self) -> str:
@@ -211,26 +216,34 @@ class LangChainAdapter:
         handler = _build_callback_handler(trace)
 
         input_data = self._build_input(task.instruction)
+        logger.debug("Invoking runnable (timeout=%ds)", task.timeout_seconds)
+
+        invoke_config: dict[str, Any] = {"callbacks": [handler]}
+        if self._recursion_limit:
+            invoke_config["recursion_limit"] = self._recursion_limit
 
         try:
             if hasattr(self._runnable, "ainvoke"):
                 result = await asyncio.wait_for(
-                    self._runnable.ainvoke(input_data, config={"callbacks": [handler]}),
+                    self._runnable.ainvoke(input_data, config=invoke_config),
                     timeout=task.timeout_seconds,
                 )
             elif hasattr(self._runnable, "invoke"):
                 result = await asyncio.wait_for(
-                    asyncio.to_thread(self._runnable.invoke, input_data, config={"callbacks": [handler]}),
+                    asyncio.to_thread(self._runnable.invoke, input_data, config=invoke_config),
                     timeout=task.timeout_seconds,
                 )
             else:
                 raise TypeError(f"Runnable {type(self._runnable)} has no invoke/ainvoke method")
 
             trace.final_output = self._extract_output(result)
+            logger.debug("Invocation complete: %d events captured", len(trace.events))
         except TimeoutError:
             trace.error = "timeout"
+            logger.warning("Invocation timed out after %ds", task.timeout_seconds)
         except Exception as e:
             trace.error = str(e)
+            logger.warning("Invocation error: %s", e)
         finally:
             trace.ended_at = datetime.now(UTC)
 
