@@ -181,11 +181,23 @@ Wraps OpenAI Agents SDK `Agent` objects using `RunHooks` for lifecycle, tool cal
 
 Key file: `agent_redteam/adapters/openai_agents.py`
 
+### HttpAdapter
+
+Wraps any agent accessible via an HTTP endpoint. Sends attack prompts as JSON using a configurable `input_template`, parses responses with a dot-path `output_path`, and extracts tool calls from OpenAI/Anthropic function-calling JSON formats or free text via regex. Useful for scanning production agents without code access.
+
+Key file: `agent_redteam/adapters/http.py`
+
 ### McpProxyAdapter
 
 Wraps stdio MCP servers with interception and optional injection modes (`description_poison`, `response_inject`, `ssrf_probe`) for supply-chain testing. Takes an `inner_adapter` that runs the agent.
 
 Key file: `agent_redteam/adapters/mcp_proxy.py`
+
+### CanaryInjector (cross-framework)
+
+Framework-agnostic canary token injection. Provides `wrap_langchain_tools`, `wrap_openai_agent_tools`, and `wrap_callable_tools` to transparently inject canary secrets into file-read and shell-execute tool results.
+
+Key file: `agent_redteam/adapters/canary_wrapper.py`
 
 ## Planned Adapters
 
@@ -193,7 +205,6 @@ These are on the roadmap — contributions welcome:
 
 | Adapter | Framework | Approach |
 |---|---|---|
-| `HttpProxyAdapter` | Any HTTP agent | Man-in-the-middle proxy |
 | `SubprocessAdapter` | CLI agents | Subprocess with I/O capture |
 | `CrewAIAdapter` | CrewAI | Agent execution hooks |
 

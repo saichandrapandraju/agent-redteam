@@ -29,6 +29,7 @@ flowchart LR
         Agent[CallableAdapter]
         LC[LangChainAdapter]
         OAI[OpenAIAgentsAdapter]
+        HTTP[HttpAdapter]
     end
     subgraph pipeline [Scan Pipeline]
         Planner[AttackPlanner]
@@ -45,6 +46,7 @@ flowchart LR
     Agent --> Planner
     LC --> Planner
     OAI --> Planner
+    HTTP --> Planner
     Planner --> Executor
     Executor --> Detectors
     Detectors --> Scoring
@@ -55,7 +57,7 @@ flowchart LR
 
 1. **You provide** an agent (or just a model endpoint)
 2. **The planner** selects attacks based on your agent's capabilities
-3. **The executor** runs each attack in an isolated synthetic environment with canary tokens
+3. **The executor** runs each attack in a **stateful environment runtime** with canary tokens, enforced network policy, and cross-tool consistency (write-then-read, email-then-outbox)
 4. **Detectors** analyze the trace for security signals (secret access, exfiltration, tool misuse)
 5. **The scorer** computes per-class vulnerability scores with statistical confidence intervals
 6. **Reports** give you a security score, risk tier, and actionable findings
@@ -97,7 +99,7 @@ See the [Getting Started](getting-started.md) guide for the full walkthrough.
 | V8 — Memory Poisoning | 8 | False facts, instruction overrides, trust injection |
 | V12 — Supply Chain (MCP) | 8 | Poisoned tool descriptions, credential harvesting, SSRF, name squatting |
 
-**86 attack templates** | **9 signal detectors + optional LLM judge** | **5 framework adapters** | **Adaptive multi-turn attacks** | **3 report formats**
+**86 attack templates** | **9 signal detectors + optional LLM judge** | **6 framework adapters + HttpAdapter** | **Stateful environment runtime** | **Adaptive multi-turn attacks** | **3 report formats**
 
 ## License
 

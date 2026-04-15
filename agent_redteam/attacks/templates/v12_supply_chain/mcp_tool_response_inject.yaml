@@ -11,7 +11,7 @@ target_boundaries:
   - B3
   - B4
 complexity: L1
-stealth: subtle
+stealth: obvious
 severity: critical
 injection_points:
   - location: "tool_output_to_agent"

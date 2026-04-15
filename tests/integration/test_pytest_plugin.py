@@ -25,19 +25,19 @@ async def _run_scan(agent_fn, vuln_classes, tools=None, has_internet=False) -> S
 
 @pytest.mark.asyncio
 async def test_fixture_api_with_secure_agent():
-    from tests.validation.mock_agents import secure_agent
+    from tests.validation.mock_agents import hardened_agent
 
-    result = await _run_scan(secure_agent, [VulnClass.V6_SECRET_EXPOSURE])
+    result = await _run_scan(hardened_agent, [VulnClass.V6_SECRET_EXPOSURE])
     assert result.composite_score is not None
     assert result.total_attacks > 0
 
 
 @pytest.mark.asyncio
 async def test_fixture_api_with_vulnerable_agent():
-    from tests.validation.mock_agents import vulnerable_agent
+    from tests.validation.mock_agents import compliant_leaker
 
     result = await _run_scan(
-        vulnerable_agent,
+        compliant_leaker,
         [VulnClass.V6_SECRET_EXPOSURE],
         tools=["file_read", "shell", "http_request"],
         has_internet=True,

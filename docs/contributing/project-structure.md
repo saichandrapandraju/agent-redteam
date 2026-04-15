@@ -37,10 +37,12 @@ The core module contains everything that other modules depend on.
 
 | File | Purpose |
 |---|---|
-| `callable.py` | `CallableAdapter` — wraps any async function, instruments tools with telemetry |
+| `callable.py` | `CallableAdapter` — wraps any async function, delegates tool execution to `EnvironmentRuntime` |
 | `llm.py` | `LLMAdapter` — wraps OpenAI-compatible endpoints with a minimal ReAct loop |
-| `langchain.py` | `LangChainAdapter` — wraps LangChain AgentExecutor/LangGraph via callbacks; includes `CanaryInjector` and `wrap_tools_with_canaries()` |
+| `langchain.py` | `LangChainAdapter` — wraps LangChain AgentExecutor/LangGraph via callbacks; re-exports `wrap_tools_with_canaries()` |
 | `openai_agents.py` | `OpenAIAgentsAdapter` — wraps OpenAI Agents SDK via RunHooks |
+| `http.py` | `HttpAdapter` — wraps any agent exposed over HTTP, with tool-call extraction from structured JSON or free text |
+| `canary_wrapper.py` | `CanaryInjector` + framework-specific wrappers (`wrap_langchain_tools`, `wrap_openai_agent_tools`, `wrap_callable_tools`) |
 | `mcp_proxy.py` | `McpProxyAdapter` — stdio MCP proxy with optional description/response injection |
 
 ### `agent_redteam/attacks/` — Attack Pipeline
@@ -58,8 +60,9 @@ The core module contains everything that other modules depend on.
 | File | Purpose |
 |---|---|
 | `builder.py` | `EnvironmentBuilder` — fluent API for constructing environments; includes `select_environment_profile()`, `inject_attack()`, `build_for_attack()`, and `copy()` |
+| `runtime.py` | `EnvironmentRuntime` — stateful tool execution engine with mutable filesystem, shell, HTTP (with `NetworkPolicy`), SQL, email inbox/outbox, git, and CRM state |
 | `canary.py` | `CanaryTokenGenerator` — generates realistic fake secrets |
-| `definitions/` | Pre-built environment YAML files (SWE, support, analyst) |
+| `definitions/` | Pre-built environment YAML files (SWE, Customer Support, Data Analyst) with rich seed data (file trees, email threads, CSV datasets, credentials) |
 
 ### `agent_redteam/detectors/` — Signal Detection
 
@@ -119,11 +122,12 @@ tests/
 ├── detectors/          # Per-detector unit tests
 ├── scoring/            # Scorers, confidence intervals
 ├── integration/        # End-to-end scanner tests, pytest plugin
-└── validation/         # Ground-truth tests with mock agents
-    └── mock_agents.py  # Secure, vulnerable, partially-secure agents
+└── validation/             # Ground-truth tests with mock agents
+    ├── mock_agents.py      # 6 deterministic mock agents (compliant_leaker, shell_executor, eager_agent, echo_agent, memory_truster, hardened_agent)
+    └── test_ground_truth.py  # Calibration matrix + per-detector unit tests + per-agent integration tests
 ```
 
-The suite currently collects **150** tests (`pytest --collect-only`).
+The suite currently collects **159** tests (`pytest --collect-only`).
 
 ## Data Flow
 

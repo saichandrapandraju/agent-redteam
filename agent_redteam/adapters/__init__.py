@@ -6,7 +6,12 @@ __all__ = [
     "LangChainAdapter",
     "OpenAIAgentsAdapter",
     "McpProxyAdapter",
+    "HttpAdapter",
     "wrap_tools_with_canaries",
+    "wrap_langchain_tools",
+    "wrap_openai_agent_tools",
+    "wrap_callable_tools",
+    "CanaryInjector",
 ]
 
 
@@ -27,8 +32,24 @@ def __getattr__(name: str):
         from agent_redteam.adapters.mcp_proxy import McpProxyAdapter
 
         return McpProxyAdapter
-    if name == "wrap_tools_with_canaries":
-        from agent_redteam.adapters.langchain import wrap_tools_with_canaries
+    if name == "HttpAdapter":
+        from agent_redteam.adapters.http import HttpAdapter
 
-        return wrap_tools_with_canaries
+        return HttpAdapter
+    if name in ("wrap_tools_with_canaries", "wrap_langchain_tools"):
+        from agent_redteam.adapters.canary_wrapper import wrap_langchain_tools
+
+        return wrap_langchain_tools
+    if name == "wrap_openai_agent_tools":
+        from agent_redteam.adapters.canary_wrapper import wrap_openai_agent_tools
+
+        return wrap_openai_agent_tools
+    if name == "wrap_callable_tools":
+        from agent_redteam.adapters.canary_wrapper import wrap_callable_tools
+
+        return wrap_callable_tools
+    if name == "CanaryInjector":
+        from agent_redteam.adapters.canary_wrapper import CanaryInjector
+
+        return CanaryInjector
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

@@ -257,22 +257,44 @@ class EnvironmentBuilder:
     # -- Template loading ----------------------------------------------------
 
     def add_files_from_definition(self, definition_name: str) -> EnvironmentBuilder:
-        """Load files from a built-in environment definition YAML."""
+        """Load files, tools, emails, and network config from a definition YAML."""
         definitions_dir = Path(__file__).parent / "definitions"
         template_path = definitions_dir / f"{definition_name}.yaml"
         if not template_path.exists():
             return self
         with open(template_path) as f:
             data = yaml.safe_load(f)
+
         for file_def in data.get("files", []):
-            self.add_file(file_def["path"], file_def["content"])
+            self.add_file(file_def["path"], file_def.get("content", ""))
+
+        existing_tool_names = {t.name for t in self._tools}
         for tool_def in data.get("tools", []):
-            self._tools.append(
-                ToolDefinition(
-                    name=tool_def["name"],
-                    description=tool_def.get("description", ""),
+            if tool_def["name"] not in existing_tool_names:
+                self._tools.append(
+                    ToolDefinition(
+                        name=tool_def["name"],
+                        description=tool_def.get("description", ""),
+                    )
+                )
+
+        for email_def in data.get("emails", []):
+            self._emails.append(
+                EmailEntry(
+                    from_addr=email_def.get("from_addr", "unknown@company.com"),
+                    to_addr=email_def.get("to_addr", "agent@company.com"),
+                    subject=email_def.get("subject", ""),
+                    body=email_def.get("body", ""),
                 )
             )
+
+        network = data.get("network", {})
+        if network.get("default_policy"):
+            self._default_network_policy = network["default_policy"]
+        for domain in network.get("allowed_domains", []):
+            if not any(r.domain == domain for r in self._network_rules):
+                self._network_rules.append(NetworkRule(domain=domain, allowed=True))
+
         return self
 
     # -- Attack injection (consolidated) ------------------------------------

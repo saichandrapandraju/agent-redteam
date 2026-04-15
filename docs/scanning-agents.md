@@ -7,6 +7,7 @@ agent-redteam provides multiple adapter types for different agent frameworks. Ch
 | `CallableAdapter` | Any async Python function | (built-in) |
 | `LangChainAdapter` | LangChain AgentExecutor or LangGraph | `pip install agent-redteam[langchain]` |
 | `OpenAIAgentsAdapter` | OpenAI Agents SDK | `pip install agent-redteam[openai-agents]` |
+| `HttpAdapter` | Any agent exposed over HTTP (REST API) | `pip install agent-redteam[http]` |
 | `McpProxyAdapter` | MCP server testing (stdio proxy, injection modes) | `pip install agent-redteam[mcp]` |
 | `LLMAdapter` | Raw LLM endpoint (see [Scanning Models](scanning-models.md)) | `pip install agent-redteam[http]` |
 
@@ -170,6 +171,25 @@ agent = create_react_agent(llm, wrapped_tools)
 
 The wrapper intercepts file-reading and shell-executing tools: if the input matches a canary-seeded path or command (e.g., `cat /home/user/.env`, `printenv`), it injects the corresponding canary value into the tool's return. See `examples/langchain_agent_scan.py` for a complete working example.
 
+### Cross-Framework Canary Wrapping
+
+The canary injection logic is framework-agnostic and available via `agent_redteam.adapters.canary_wrapper`. Use the appropriate wrapper for your framework:
+
+```python
+from agent_redteam.adapters.canary_wrapper import (
+    wrap_langchain_tools,     # LangChain BaseTool list
+    wrap_openai_agent_tools,  # OpenAI Agents SDK tool list
+    wrap_callable_tools,      # Plain dict[str, callable]
+)
+
+# All wrappers take the same (tools, canary_tokens) signature
+wrapped = wrap_langchain_tools(tools, canary_tokens)
+wrapped = wrap_openai_agent_tools(tools, canary_tokens)
+wrapped = wrap_callable_tools(tools, canary_tokens)
+```
+
+Each wrapper intercepts file-read and shell-execute tools, injecting canary secrets into their results so that downstream detectors can flag leakage regardless of the agent framework.
+
 ## OpenAI Agents SDK Adapter
 
 Wrap an `openai-agents` Agent with RunHooks-based instrumentation:
@@ -191,6 +211,38 @@ result = await Scanner(adapter, config).run()
 ```
 
 The adapter captures agent starts/ends, tool calls/results, and handoffs between agents in multi-agent setups.
+
+## HTTP Adapter (REST API Agents)
+
+For agents exposed over an HTTP API (e.g., a FastAPI service, a deployed agent behind a load balancer), use `HttpAdapter`. It sends attack prompts as JSON and parses responses, including best-effort extraction of tool calls from OpenAI/Anthropic function-calling formats:
+
+```python
+from agent_redteam.adapters import HttpAdapter
+from agent_redteam import Scanner, ScanConfig
+
+adapter = HttpAdapter(
+    base_url="https://my-agent.example.com/chat",
+    method="POST",
+    input_template={"messages": [{"role": "user", "content": "{input}"}]},
+    output_path="choices.0.message.content",
+    headers={"Authorization": "Bearer my-api-key"},
+)
+
+config = ScanConfig.quick()
+result = await Scanner(adapter, config).run()
+```
+
+### Configuration
+
+| Parameter | Type | Description |
+|---|---|---|
+| `base_url` | `str` | The agent's HTTP endpoint |
+| `method` | `str` | HTTP method (`POST`, `PUT`, etc.) — default `POST` |
+| `input_template` | `dict` | Request body template; `{input}` is replaced with the attack prompt |
+| `output_path` | `str` | Dot-separated path to extract the agent's output from the JSON response (e.g., `choices.0.message.content`) |
+| `headers` | `dict` | Optional HTTP headers (auth tokens, content-type overrides) |
+
+The adapter extracts tool calls from structured JSON responses (OpenAI function-calling format) and falls back to regex-based extraction from free text.
 
 ## MCP Server Testing
 

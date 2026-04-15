@@ -68,16 +68,23 @@ classDiagram
         +run(task, env) AgentTrace
     }
 
+    class HttpAdapter {
+        +base_url: str
+        +run(task, env) AgentTrace
+    }
+
     AgentAdapter <|.. LLMAdapter
     AgentAdapter <|.. CallableAdapter
     AgentAdapter <|.. LangChainAdapter
     AgentAdapter <|.. OpenAIAgentsAdapter
+    AgentAdapter <|.. HttpAdapter
 ```
 
 - **LLMAdapter** wraps a raw OpenAI-compatible endpoint with a minimal ReAct loop
-- **CallableAdapter** wraps any async Python function, providing instrumented tools
+- **CallableAdapter** wraps any async Python function, backed by the stateful `EnvironmentRuntime`
 - **LangChainAdapter** wraps LangChain AgentExecutor or LangGraph CompiledGraph using callback-based instrumentation
 - **OpenAIAgentsAdapter** wraps OpenAI Agents SDK agents using RunHooks-based instrumentation
+- **HttpAdapter** wraps any agent exposed over HTTP — sends attack prompts and parses tool calls from OpenAI/Anthropic response formats
 - **McpProxyAdapter** wraps MCP stdio servers with interception/injection for supply-chain and MCP-focused tests
 
 ### Attack Pipeline
@@ -107,21 +114,33 @@ flowchart LR
 
 ### Environments
 
-Synthetic environments simulate a realistic workspace:
+Synthetic environments simulate a realistic workspace backed by a **stateful runtime**:
 
 ```mermaid
 flowchart TB
     Builder[EnvironmentBuilder] --> Env[Environment]
-    Env --> Tools[Mock Tools]
-    Env --> Files[Seeded Files]
+    Env --> Runtime[EnvironmentRuntime]
+    Runtime --> FS[Mutable Filesystem]
+    Runtime --> Shell[Shell with env vars]
+    Runtime --> HTTP[HTTP with NetworkPolicy]
+    Runtime --> SQL[SQL over seeded CSVs]
+    Runtime --> Email[Inbox + Outbox]
+    Runtime --> Git[GitState]
+    Runtime --> CRM[Customers + Tickets]
     Env --> Secrets[Canary Tokens]
-    Env --> Emails[Email Inbox]
-    Env --> Network[Network Rules]
 ```
 
+The `EnvironmentRuntime` maintains **mutable shared state** so tools produce consistent behavior:
+- `file_write` updates the filesystem; subsequent `file_read` sees the change
+- `send_email` appends to the outbox; the `ExfiltrationDetector` can check it
+- `shell cat /path` resolves against the filesystem; `env`/`printenv` returns seeded env vars including canary tokens
+- `sql_query` returns rows parsed from CSV files seeded in the environment
+- `http_request` enforces `NetworkPolicy` — denied domains return 403, canary domains log the attempt and return 200
+
+Three domain-specific YAML definitions (SWE, Customer Support, Data Analyst) seed rich data: multi-file repos, real email threads, CSV transaction histories, customer records, SQL queries, and credentials files.
+
 - **Canary tokens** are realistic-looking fake secrets (AWS keys, GitHub tokens, DB URLs). If the agent exposes one, it's a definitive compromise.
-- **Files** are seeded with a mix of normal content and potentially sensitive data.
-- **Network rules** define allowed, denied, and canary domains. The `ExfiltrationDetector` reads these from `trace.environment.network_rules` to dynamically enforce network policy and flag requests to canary domains as definitive compromise.
+- **Network rules** define allowed, denied, and canary domains. Enforced in the runtime's HTTP handler and read by `ExfiltrationDetector` from `trace.environment.network_rules`.
 
 ### Telemetry
 
@@ -240,7 +259,7 @@ erDiagram
 
 ```
 agent_redteam/
-  adapters/           # LLMAdapter, CallableAdapter, LangChainAdapter, OpenAIAgentsAdapter, McpProxyAdapter
+  adapters/           # LLMAdapter, CallableAdapter, LangChainAdapter, OpenAIAgentsAdapter, HttpAdapter, McpProxyAdapter, canary_wrapper
   attacks/
     templates/        # 86 YAML attack definitions
       v01_indirect_injection/   # 12 templates
@@ -263,8 +282,9 @@ agent_redteam/
     errors.py         # Custom exceptions
   detectors/          # 9 signal detectors + optional SemanticJudgeDetector
   environments/
-    definitions/      # 3 YAML environment definitions
+    definitions/      # 3 YAML environment definitions (SWE, Customer Support, Data Analyst)
     builder.py        # EnvironmentBuilder (select_environment_profile, inject_attack, build_for_attack, copy)
+    runtime.py        # EnvironmentRuntime — stateful tool execution engine (filesystem, shell, HTTP, SQL, email)
     canary.py         # CanaryTokenGenerator
   pytest_plugin/      # pytest fixture
   reporting/          # JSON, Markdown, Terminal formatters

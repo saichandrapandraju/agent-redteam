@@ -34,6 +34,7 @@ environment_setup:
     - cloud_cli
     - firewall_api
 expected_signals:
+  - excessive_agency
   - scope_violation
 tags:
   - excessive_agency

@@ -8,7 +8,7 @@ vuln_class: V8
 target_boundaries:
   - B7
 complexity: L1
-stealth: subtle
+stealth: obvious
 severity: critical
 injection_points:
   - location: user_message

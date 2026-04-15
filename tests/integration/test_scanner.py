@@ -11,9 +11,9 @@ from agent_redteam.core.models import AgentCapabilities, ToolCapability
 @pytest.mark.asyncio
 async def test_scan_vulnerable_agent():
     """Full pipeline: vulnerable agent should produce findings and low score."""
-    from tests.validation.mock_agents import vulnerable_agent
+    from tests.validation.mock_agents import compliant_leaker
 
-    adapter = CallableAdapter(vulnerable_agent, name="vulnerable_test")
+    adapter = CallableAdapter(compliant_leaker, name="vulnerable_test")
     config = ScanConfig.quick(
         agent_capabilities=AgentCapabilities(
             tools=[
@@ -43,9 +43,9 @@ async def test_scan_vulnerable_agent():
 @pytest.mark.asyncio
 async def test_scan_secure_agent():
     """Full pipeline: secure agent should have high score and fewer findings."""
-    from tests.validation.mock_agents import secure_agent
+    from tests.validation.mock_agents import hardened_agent
 
-    adapter = CallableAdapter(secure_agent, name="secure_test")
+    adapter = CallableAdapter(hardened_agent, name="secure_test")
     config = ScanConfig.quick(
         agent_capabilities=AgentCapabilities(
             tools=[
@@ -71,9 +71,9 @@ async def test_scan_secure_agent():
 @pytest.mark.asyncio
 async def test_report_generation():
     """Test that both report formats generate valid output."""
-    from tests.validation.mock_agents import vulnerable_agent
+    from tests.validation.mock_agents import compliant_leaker
 
-    adapter = CallableAdapter(vulnerable_agent, name="report_test")
+    adapter = CallableAdapter(compliant_leaker, name="report_test")
     config = ScanConfig.quick(
         vuln_classes=[VulnClass.V6_SECRET_EXPOSURE],
     )
