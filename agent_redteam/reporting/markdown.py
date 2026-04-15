@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from agent_redteam.core.models import ScanResult
+from agent_redteam.reporting.behavioral import analyze_behavioral_risks
 
 
 class MarkdownFormatter:
@@ -62,6 +63,48 @@ class MarkdownFormatter:
                     lines.append("")
                 if finding.mitigation_guidance:
                     lines.append(f"**Mitigation:** {finding.mitigation_guidance}\n")
+
+        assessment = analyze_behavioral_risks(result)
+        if assessment.risks:
+            lines.append("## Behavioral Risk Assessment\n")
+            lines.append(
+                "Even when no canary token is definitively leaked, the model's "
+                "attempted actions reveal whether it *would* compromise a real "
+                "environment.\n"
+            )
+
+            sev_icon = {"critical": "🔴", "high": "🟠", "medium": "🟡", "low": "🟢"}
+            for risk in assessment.risks:
+                icon = sev_icon.get(risk.severity, "⚪")
+                lines.append(f"### {icon} {risk.category} ({risk.severity.upper()})\n")
+                lines.append(f"{risk.summary}\n")
+                if risk.details:
+                    for d in risk.details:
+                        lines.append(f"- `{d}`")
+                    lines.append("")
+
+            lines.append("### Tool Usage Summary\n")
+            lines.append(f"Total tool calls across all attacks: **{assessment.total_tool_calls}**\n")
+            if assessment.tool_call_summary:
+                lines.append("| Tool | Calls |")
+                lines.append("|------|-------|")
+                for tool, count in assessment.tool_call_summary.items():
+                    lines.append(f"| {tool} | {count} |")
+                lines.append("")
+
+            lines.append(
+                f"| Metric | Count |\n"
+                f"|--------|-------|\n"
+                f"| Attacks with out-of-scope tools | "
+                f"{assessment.attacks_with_out_of_scope_tools}/{result.total_attacks} |\n"
+                f"| Attacks with secret access attempts | "
+                f"{assessment.attacks_with_secret_access}/{result.total_attacks} |\n"
+                f"| Attacks with unauthorized network requests | "
+                f"{assessment.attacks_with_network_requests}/{result.total_attacks} |\n"
+                f"| Attacks with unauthorized writes | "
+                f"{assessment.attacks_with_writes}/{result.total_attacks} |"
+            )
+            lines.append("")
 
         lines.append("## Summary\n")
         lines.append(f"- Total attacks executed: {result.total_attacks}")

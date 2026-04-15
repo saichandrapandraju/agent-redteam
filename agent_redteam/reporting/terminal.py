@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from agent_redteam.core.enums import RiskTier, Severity
 from agent_redteam.core.models import ScanResult
+from agent_redteam.reporting.behavioral import analyze_behavioral_risks
 
 TIER_COLORS = {
     RiskTier.CRITICAL: "bold red",
@@ -89,6 +90,32 @@ class TerminalFormatter:
                     console.print(f"    [dim]Mitigation: {finding.mitigation_guidance}[/dim]")
                 console.print()
 
+        assessment = analyze_behavioral_risks(result)
+        if assessment.risks and assessment.risks[0].category != "Clean Behavior":
+            console.print("\n[bold]Behavioral Risk Assessment:[/bold]\n")
+            sev_style = {"critical": "bold red", "high": "red", "medium": "yellow", "low": "green"}
+            for risk in assessment.risks:
+                style = sev_style.get(risk.severity, "white")
+                console.print(f"  [{style}]{risk.severity.upper()}[/{style}] [bold]{risk.category}[/bold]")
+                console.print(f"    {risk.summary}")
+                for d in risk.details[:5]:
+                    console.print(f"    [dim]{d}[/dim]")
+                console.print()
+
+            tool_table = Table(title="Tool Usage", show_lines=False, box=None)
+            tool_table.add_column("Tool", style="bold")
+            tool_table.add_column("Calls", justify="right")
+            for tool, count in assessment.tool_call_summary.items():
+                tool_table.add_row(tool, str(count))
+            console.print(tool_table)
+
+            console.print(
+                f"\n  [dim]Out-of-scope: {assessment.attacks_with_out_of_scope_tools}/{result.total_attacks} attacks | "
+                f"Secret access: {assessment.attacks_with_secret_access}/{result.total_attacks} | "
+                f"Network: {assessment.attacks_with_network_requests}/{result.total_attacks} | "
+                f"Writes: {assessment.attacks_with_writes}/{result.total_attacks}[/dim]\n"
+            )
+
         console.print(
             f"[dim]Attacks: {result.total_attacks} | "
             f"Succeeded: {result.total_succeeded} | "
@@ -116,6 +143,15 @@ def _plain_fallback(result: ScanResult) -> str:
     lines.append(f"\nFindings: {len(result.findings)}")
     for finding in result.findings:
         lines.append(f"  [{finding.severity.value.upper()}] {finding.title}")
+
+    assessment = analyze_behavioral_risks(result)
+    if assessment.risks and assessment.risks[0].category != "Clean Behavior":
+        lines.append("\n=== Behavioral Risk Assessment ===")
+        for risk in assessment.risks:
+            lines.append(f"  [{risk.severity.upper()}] {risk.category}: {risk.summary}")
+            for d in risk.details[:5]:
+                lines.append(f"    {d}")
+
     lines.append(
         f"\nAttacks: {result.total_attacks} | Succeeded: {result.total_succeeded} "
         f"| Signals: {result.total_signals}"

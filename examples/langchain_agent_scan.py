@@ -147,17 +147,21 @@ async def main():
                 ToolCapability(name="save_note"),
             ],
             has_internet_access=True,
+            has_memory=True,
             data_sensitivity=Severity.HIGH,
         ),
         vuln_classes=[
             VulnClass.V1_INDIRECT_INJECTION,
             VulnClass.V2_DIRECT_INJECTION,
+            VulnClass.V3_EXCESSIVE_AGENCY,
             VulnClass.V5_TOOL_MISUSE,
             VulnClass.V6_SECRET_EXPOSURE,
+            VulnClass.V7_DATA_EXFILTRATION,
+            VulnClass.V8_MEMORY_POISONING,
         ],
     )
     config.budget = BudgetConfig(
-        max_attacks=8, trials_per_attack=1, timeout_per_attack=90
+        max_attacks=16, trials_per_attack=1, timeout_per_attack=90
     )
 
     scanner = Scanner(adapter, config)
@@ -166,6 +170,7 @@ async def main():
     print(f"  LLM:    {OLLAMA_MODEL} via Ollama")
     print(f"  Tools:  {', '.join(t.name for t in tools)}")
     print(f"  Budget: {config.budget.max_attacks} attacks, 1 trial each")
+    print(f"  Classes: {', '.join(vc.value for vc in config.vuln_classes)}")
     print()
 
     def on_progress(current, total, result):
@@ -188,13 +193,57 @@ async def main():
     print(f"Risk tier:      {result.composite_score.risk_tier}")
     print(f"Overall score:  {result.composite_score.overall_score:.2f}")
 
-    print("\n--- TRACE EVENT BREAKDOWN (first 3 attacks) ---")
-    for ar in result.attack_results[:3]:
-        if ar.trace:
-            by_type: dict[str, int] = {}
-            for ev in ar.trace.events:
-                by_type[ev.event_type.value] = by_type.get(ev.event_type.value, 0) + 1
-            print(f"  {ar.attack.template.id}: {by_type}")
+    print("\n--- Per-Class Scores ---")
+    for vc, vs in result.composite_score.per_class_scores.items():
+        n = sum(1 for ar in result.attack_results if ar.attack.template.vuln_class == vc)
+        w = sum(1 for ar in result.attack_results if ar.attack.template.vuln_class == vc and ar.succeeded)
+        print(f"  {vc.value:5s}  score={vs.score:5.1f}  attacks={w}/{n}")
+
+    print("\n--- Findings ---")
+    for f in result.findings:
+        print(f"  [{f.severity.value:8s}] {f.vuln_class.value}: {f.title}")
+
+    print("\n--- Detailed Traces (compromised attacks) ---")
+    for ar in result.attack_results:
+        if not ar.succeeded or not ar.trace:
+            continue
+        t = ar.trace
+        print(f"\n  {'='*70}")
+        print(f"  COMPROMISED: {ar.attack.template.id} [{ar.attack.template.vuln_class.value}]")
+        print(f"  Description: {ar.attack.template.description}")
+        print(f"  Events: {len(t.events)}")
+        print(f"  {'='*70}")
+        print(f"\n  Instruction: {t.task.instruction[:300]}")
+        print()
+        for ev in t.events:
+            etype = ev.event_type.value
+            turn = ev.turn_number or 0
+            if "prompt" in etype:
+                role = (ev.metadata or {}).get("role", "user")
+                if role == "system":
+                    print(f"    [{turn}] SYSTEM: ({len(ev.content or '')} chars)")
+                else:
+                    snippet = (ev.content or "")[:200].replace("\n", "\\n")
+                    print(f"    [{turn}] USER: {snippet}")
+            elif "response" in etype:
+                tokens = (ev.metadata or {}).get("completion_tokens", "?")
+                content = (ev.content or "").replace("\n", "\\n")[:300]
+                print(f"    [{turn}] MODEL ({tokens} tok): {content}")
+            elif "tool" in etype and "call" in etype:
+                args_str = json.dumps(ev.tool_args or {}, ensure_ascii=False)[:200]
+                print(f"    [{turn}] -> {ev.tool_name}({args_str})")
+            elif "tool" in etype and "result" in etype:
+                snippet = str(ev.tool_result or "")[:200].replace("\n", "\\n")
+                print(f"    [{turn}] <- {ev.tool_name}: {snippet}")
+            elif "file" in etype:
+                print(f"    [{turn}]    FILE: {ev.file_path}")
+            elif "network" in etype:
+                print(f"    [{turn}]    HTTP: {ev.url}")
+        if t.final_output:
+            print(f"    FINAL: {t.final_output[:300].replace(chr(10), chr(92)+'n')}")
+        print(f"\n  Signals ({len(ar.signals)}):")
+        for s in ar.signals:
+            print(f"    [{s.tier.value:25s}] ({s.detector_name}) {s.description}")
 
     print("\n" + scanner.report(result, fmt="markdown"))
 
