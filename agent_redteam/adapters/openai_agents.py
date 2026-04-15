@@ -141,7 +141,7 @@ class OpenAIAgentsAdapter:
         return _HAS_AGENTS_SDK and self._agent is not None
 
     async def run(self, task: AgentTask, environment: Environment) -> AgentTrace:
-        trace = AgentTrace(task=task)
+        trace = AgentTrace(task=task, environment=environment)
         hooks = _TraceRunHooks(trace)
 
         try:

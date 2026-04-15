@@ -128,9 +128,9 @@ sequenceDiagram
 ```
 
 1. The **planner** selects attacks based on your agent's declared capabilities
-2. For each attack, the **executor** builds a synthetic environment (with canary secrets, mock tools, poisoned data)
-3. Your agent runs the task, and all its actions are recorded into an **AgentTrace**
-4. **Detectors** analyze the trace for security signals (secret access, exfiltration, injection success, tool misuse)
+2. The **scanner** automatically selects a base environment profile (e.g., `swe_agent`, `customer_support_agent`, `data_analyst_agent`) based on the agent's declared tools, then for each attack, the **executor** builds an isolated synthetic environment via `build_for_attack()` — seeding canary secrets, mock tools, and poisoned data
+3. Your agent runs the task, and all its actions are recorded into an **AgentTrace** (which includes the `Environment` used for that run)
+4. **Detectors** analyze the trace for security signals — using both static rules and the trace's attached environment context (e.g., network rules, canary domains) for accurate detection
 5. The **scorer** aggregates everything into a composite score with confidence intervals
 
 ## Next Steps

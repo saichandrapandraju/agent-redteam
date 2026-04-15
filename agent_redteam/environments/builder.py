@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+import copy
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 import yaml
@@ -17,6 +18,44 @@ from agent_redteam.core.models import (
     ToolDefinition,
 )
 from agent_redteam.environments.canary import CanaryTokenGenerator
+
+if TYPE_CHECKING:
+    from agent_redteam.core.models import AgentCapabilities, Attack
+
+
+_TOOL_TO_PROFILE: dict[str, str] = {
+    "read_emails": "customer_support_agent",
+    "send_email": "customer_support_agent",
+    "email": "customer_support_agent",
+    "search_kb": "customer_support_agent",
+    "update_ticket": "customer_support_agent",
+    "lookup_customer": "customer_support_agent",
+    "sql_query": "data_analyst_agent",
+    "db_query": "data_analyst_agent",
+    "database": "data_analyst_agent",
+    "sql": "data_analyst_agent",
+}
+
+_DEFAULT_PROFILE = "swe_agent"
+
+
+def select_environment_profile(capabilities: AgentCapabilities) -> str:
+    """Infer the best environment definition from declared agent capabilities.
+
+    Counts tool-name matches against known profiles and returns the profile
+    with the most hits, falling back to ``swe_agent``.
+    """
+    votes: dict[str, int] = {}
+    tool_names = {t.name.lower() for t in capabilities.tools}
+
+    for tool_name in tool_names:
+        for pattern, profile in _TOOL_TO_PROFILE.items():
+            if pattern in tool_name:
+                votes[profile] = votes.get(profile, 0) + 1
+
+    if not votes:
+        return _DEFAULT_PROFILE
+    return max(votes, key=votes.get)  # type: ignore[arg-type]
 
 
 class EnvironmentBuilder:
@@ -199,6 +238,50 @@ class EnvironmentBuilder:
                 )
             )
         return self
+
+    # -- Attack injection (consolidated) ------------------------------------
+
+    def inject_attack(self, attack: Attack) -> EnvironmentBuilder:
+        """Configure the environment for a specific attack.
+
+        Reads the template's ``environment_setup`` and injects payloads,
+        emails, files, memory entries, and secrets in one call.
+        """
+        setup = attack.template.environment_setup
+        attack_id = str(attack.id)
+        payload = attack.resolved_payload
+
+        if "emails" in setup:
+            self.inject_attack_emails(setup["emails"], payload, attack_id)
+        if "files" in setup:
+            self.inject_attack_files(setup["files"], payload, attack_id)
+        if "memory" in setup:
+            self.inject_attack_memory(setup["memory"], payload, attack_id)
+        if "secrets" in setup:
+            self.inject_attack_secrets(setup["secrets"])
+        return self
+
+    def build_for_attack(self, attack: Attack) -> Environment:
+        """Create an independent environment with attack content injected.
+
+        Non-mutating: copies the builder state first so the base builder
+        can be reused across attacks.
+        """
+        return self.copy().inject_attack(attack).build()
+
+    # -- Copy ----------------------------------------------------------------
+
+    def copy(self) -> EnvironmentBuilder:
+        """Return a deep copy of this builder so mutations don't affect the original."""
+        clone = EnvironmentBuilder(self._name)
+        clone._files = copy.deepcopy(self._files)
+        clone._tools = copy.deepcopy(self._tools)
+        clone._canaries = copy.deepcopy(self._canaries)
+        clone._emails = copy.deepcopy(self._emails)
+        clone._network_rules = copy.deepcopy(self._network_rules)
+        clone._default_network_policy = self._default_network_policy
+        clone._context = copy.deepcopy(self._context)
+        return clone
 
     # -- Build ---------------------------------------------------------------
 

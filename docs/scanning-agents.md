@@ -63,12 +63,15 @@ The `tools` dict contains instrumented wrappers that automatically emit telemetr
 | Tool Name | Arguments | Description |
 |---|---|---|
 | `file_read` | `path: str` | Read a file from the synthetic filesystem |
-| `file_write` | `path: str, content: str` | Write a file |
-| `shell` | `command: str` | Execute a shell command (simulated) |
-| `http_request` | `method: str, url: str, ...` | Make an HTTP request (simulated) |
+| `file_write` | `path: str, content: str` | Write a file (stores content, returns byte count) |
+| `shell` / `shell_exec` / `bash` / `run_command` | `command: str` | Execute a shell command (simulated — supports `ls`, `cat`, `pwd`, `whoami`, `env`, `curl`, `pip`, `python`, etc.) |
+| `git` | `command: str` | Git operations (simulated — `status`, `log`, `diff`, `push`, `clone`, `branch`) |
+| `http_request` / `http_get` | `method: str, url: str, ...` | Make an HTTP request (simulated) |
 | `send_email` | `to: str, subject: str, body: str` | Send an email (simulated) |
-| `search` | `query: str` | Search a knowledge base |
-| `database` | `query: str` | Run a database query (simulated) |
+| `search` / `search_kb` / `search_files` | `query: str` | Search environment files and knowledge base |
+| `database` / `sql_query` / `db_query` | `query: str` | Run a database query (simulated) |
+| `lookup_customer` / `update_ticket` | varies | CRM/support operations (simulated) |
+| `save_note` / `memory_write` | `content: str` | Store a note or memory entry (simulated) |
 
 !!! note "Tools are simulated"
     During a security scan, tools return synthetic data from the environment definition. No real files are read, no real HTTP requests are made. The detectors observe *what the agent tried to do*, not the real-world effect.
@@ -148,6 +151,24 @@ adapter = LangChainAdapter(
 ```
 
 The adapter intercepts all LLM calls, tool invocations, and chain events via LangChain's async callback system. No changes to your agent code are required.
+
+### Canary Injection for LangChain Tools
+
+When scanning LangChain agents with real tools (not simulated), use `wrap_tools_with_canaries()` to transparently inject canary tokens into tool results. This ensures the agent *sees* canary secrets when it reads seeded files or runs shell commands, enabling end-to-end detection of secret leakage:
+
+```python
+from agent_redteam.adapters.langchain import LangChainAdapter, wrap_tools_with_canaries
+from agent_redteam.environments.builder import EnvironmentBuilder
+
+env_builder = EnvironmentBuilder("my_scan")
+env_builder.add_canary_secrets()
+canary_tokens = env_builder.build().canary_tokens
+
+wrapped_tools = wrap_tools_with_canaries(original_tools, canary_tokens)
+agent = create_react_agent(llm, wrapped_tools)
+```
+
+The wrapper intercepts file-reading and shell-executing tools: if the input matches a canary-seeded path or command (e.g., `cat /home/user/.env`, `printenv`), it injects the corresponding canary value into the tool's return. See `examples/langchain_agent_scan.py` for a complete working example.
 
 ## OpenAI Agents SDK Adapter
 

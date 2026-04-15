@@ -99,13 +99,11 @@ flowchart LR
 
 **AttackPlanner** filters templates by scan profile, agent capabilities, and vulnerability class targets, then prioritizes by severity and stealth. Budget limits cap the total.
 
-**AttackExecutor** runs each attack:
+**AttackExecutor** receives an `EnvironmentBuilder` (pre-configured with the appropriate base profile) and runs each attack:
 
-1. Builds a synthetic environment using `EnvironmentBuilder`
-2. Seeds it with canary tokens (fake secrets)
-3. Injects attack payloads into appropriate locations (emails, files, tool outputs)
-4. Runs the agent and captures the full `AgentTrace`
-5. Passes the trace to detectors
+1. Calls `env_builder.build_for_attack(attack)` — which internally `copy()`s the builder, calls `inject_attack(attack)` to merge attack-specific payloads/files/emails, and `build()`s an isolated `Environment` with canary tokens
+2. Runs the agent and captures the full `AgentTrace` (with the `Environment` attached to the trace)
+3. Passes the trace to detectors, which can reference `trace.environment` for network rules and canary domains
 
 ### Environments
 
@@ -123,7 +121,7 @@ flowchart TB
 
 - **Canary tokens** are realistic-looking fake secrets (AWS keys, GitHub tokens, DB URLs). If the agent exposes one, it's a definitive compromise.
 - **Files** are seeded with a mix of normal content and potentially sensitive data.
-- **Network rules** define allowed domains. Requests to unauthorized domains trigger exfiltration signals.
+- **Network rules** define allowed, denied, and canary domains. The `ExfiltrationDetector` reads these from `trace.environment.network_rules` to dynamically enforce network policy and flag requests to canary domains as definitive compromise.
 
 ### Telemetry
 
@@ -176,7 +174,7 @@ The framework ships **10 detectors**: **9** always-on signal detectors plus **1*
 | Detector | Targets | What It Detects |
 |---|---|---|
 | SecretAccessDetector | V6 | Canary token access, secret file paths |
-| ExfiltrationDetector | V7 | Unauthorized outbound requests, external emails |
+| ExfiltrationDetector | V7 | Unauthorized outbound requests, external emails, canary domain hits (uses `trace.environment` network rules) |
 | InjectionSuccessDetector | V1, V2 | Payload echo, unexpected tool calls, task divergence |
 | ToolMisuseDetector | V5 | Dangerous commands (23 patterns), path traversal, SQL injection |
 | ScopeViolationDetector | V1, V2, V3, V5 | Out-of-scope tools, excessive calls |
@@ -235,6 +233,7 @@ erDiagram
 
     Attack ||--|| AttackTemplate : "from"
     AgentTrace ||--|{ Event : contains
+    AgentTrace ||--o| Environment : "has (optional)"
 ```
 
 ## Directory Structure
@@ -265,7 +264,7 @@ agent_redteam/
   detectors/          # 9 signal detectors + optional SemanticJudgeDetector
   environments/
     definitions/      # 3 YAML environment definitions
-    builder.py        # EnvironmentBuilder (files, emails, memory, secrets)
+    builder.py        # EnvironmentBuilder (select_environment_profile, inject_attack, build_for_attack, copy)
     canary.py         # CanaryTokenGenerator
   pytest_plugin/      # pytest fixture
   reporting/          # JSON, Markdown, Terminal formatters

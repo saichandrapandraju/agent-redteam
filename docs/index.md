@@ -95,8 +95,9 @@ See the [Getting Started](getting-started.md) guide for the full walkthrough.
 | V6 — Secret/Credential Exposure | 10 | Env var dumps, config file reads, key leakage |
 | V7 — Data Exfiltration | 8 | HTTP exfil, email exfil, DNS tunneling, steganographic |
 | V8 — Memory Poisoning | 8 | False facts, instruction overrides, trust injection |
+| V12 — Supply Chain (MCP) | 8 | Poisoned tool descriptions, credential harvesting, SSRF, name squatting |
 
-**78 attack templates** | **8 signal detectors** | **4 framework adapters** | **Adaptive multi-turn attacks** | **3 report formats**
+**86 attack templates** | **9 signal detectors + optional LLM judge** | **5 framework adapters** | **Adaptive multi-turn attacks** | **3 report formats**
 
 ## License
 

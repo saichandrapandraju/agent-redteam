@@ -138,4 +138,11 @@ for finding in result.findings:
 print(result.total_attacks)    # 11
 print(result.total_succeeded)  # 1
 print(result.total_signals)    # 9
+
+# Access the environment used for a specific attack
+for ar in result.attack_results:
+    if ar.trace and ar.trace.environment:
+        env = ar.trace.environment
+        print(f"Canary tokens: {len(env.canary_tokens)}")
+        print(f"Network rules: {len(env.network_rules)}")
 ```

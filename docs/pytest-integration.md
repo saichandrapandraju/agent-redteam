@@ -52,7 +52,7 @@ The `agent_scan` fixture returns an async callable with these parameters:
 |---|---|---|---|
 | `agent_fn` | `callable` | *required* | Your async agent function |
 | `vuln_classes` | `list[VulnClass]` | V1, V6 | Vulnerability classes to test |
-| `tools` | `list[str]` | `["file_read", "shell"]` | Tool names for capability declaration |
+| `tools` | `list[str]` | `["file_read", "shell"]` | Tool names for capability declaration (also drives automatic environment profile selection — e.g., adding `send_email` selects `customer_support_agent`) |
 | `has_internet_access` | `bool` | `False` | Whether agent has internet |
 | `data_sensitivity` | `Severity` | `MEDIUM` | Data sensitivity level |
 | `adapter_name` | `str` | `"pytest_agent"` | Name for the adapter |

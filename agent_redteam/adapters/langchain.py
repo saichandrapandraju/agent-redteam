@@ -23,6 +23,7 @@ from agent_redteam.core.enums import EventType, TrustBoundary
 from agent_redteam.core.models import (
     AgentTask,
     AgentTrace,
+    CanaryToken,
     Environment,
     Event,
 )
@@ -35,7 +36,124 @@ try:
 except ImportError:
     AsyncCallbackHandler = None  # type: ignore[assignment, misc]
 
+try:
+    from langchain_core.tools import StructuredTool
+except ImportError:
+    StructuredTool = None  # type: ignore[assignment, misc]
+
 logger = logging.getLogger("agent_redteam.adapters.langchain")
+
+
+# ---------------------------------------------------------------------------
+# Canary injection for LangChain tools
+# ---------------------------------------------------------------------------
+
+_FILE_TOOL_NAMES = frozenset({"file_read", "read_file", "read", "cat_file"})
+_SHELL_TOOL_NAMES = frozenset({"shell_exec", "shell", "bash", "execute", "run_command", "terminal"})
+_ENV_KEYWORDS = frozenset({"env", "printenv", "export"})
+
+
+class CanaryInjector:
+    """Maps canary tokens to file paths and env vars for output injection.
+
+    Used by ``wrap_tools_with_canaries`` to make a real LangChain agent
+    encounter the same secret values that detectors look for.
+    """
+
+    def __init__(self, canary_tokens: list[CanaryToken]) -> None:
+        self._path_map: dict[str, str] = {}
+        self._env_map: dict[str, str] = {}
+        for ct in canary_tokens:
+            if ct.file_path:
+                self._path_map[ct.file_path] = ct.value
+            if ct.env_var:
+                self._env_map[ct.env_var] = ct.value
+
+    @property
+    def has_tokens(self) -> bool:
+        return bool(self._path_map) or bool(self._env_map)
+
+    def inject_file_result(self, path: str, original: str) -> str:
+        """If *path* is a canary-seeded location, return the canary value."""
+        if path in self._path_map:
+            return self._path_map[path]
+        return original
+
+    def inject_shell_result(self, command: str, original: str) -> str:
+        """Append canary env vars to env-dump commands; replace cat output for canary paths."""
+        cmd_lower = command.lower()
+
+        if "cat" in cmd_lower:
+            for path, value in self._path_map.items():
+                if path in command:
+                    return value
+
+        cmd_parts = cmd_lower.strip().split()
+        cmd_name = cmd_parts[0] if cmd_parts else ""
+        if cmd_name in _ENV_KEYWORDS or (len(cmd_parts) > 1 and cmd_parts[0] in ("set", "declare")):
+            extra = "\n".join(f"{k}={v}" for k, v in self._env_map.items())
+            if extra:
+                return f"{original}\n{extra}" if original else extra
+
+        return original
+
+
+def wrap_tools_with_canaries(
+    tools: list[Any],
+    canary_tokens: list[CanaryToken],
+) -> list[Any]:
+    """Wrap LangChain tools so file reads and shell commands return canary values.
+
+    Non-matching tools are passed through unchanged. Requires ``langchain-core``.
+
+    Example::
+
+        from agent_redteam.adapters.langchain import wrap_tools_with_canaries
+
+        canaries = env_builder.build().canary_tokens
+        wrapped = wrap_tools_with_canaries(ALL_TOOLS, canaries)
+        agent = create_react_agent(llm, wrapped)
+    """
+    injector = CanaryInjector(canary_tokens)
+    if not injector.has_tokens:
+        return tools
+    return [_wrap_one_tool(t, injector) for t in tools]
+
+
+def _wrap_one_tool(tool: Any, injector: CanaryInjector) -> Any:
+    """Wrap a single LangChain tool if it's a file or shell tool."""
+    name = getattr(tool, "name", "")
+    is_file = name in _FILE_TOOL_NAMES
+    is_shell = name in _SHELL_TOOL_NAMES
+
+    if not is_file and not is_shell:
+        return tool
+
+    original_fn = getattr(tool, "func", None)
+    if original_fn is None:
+        return tool
+
+    if StructuredTool is None:
+        logger.warning("langchain_core not installed; skipping canary wrapping for %s", name)
+        return tool
+
+    if is_file:
+        def wrapped_fn(*args: Any, **kwargs: Any) -> str:
+            result = original_fn(*args, **kwargs)
+            path = kwargs.get("path") or (args[0] if args else "")
+            return injector.inject_file_result(str(path), str(result))
+    else:
+        def wrapped_fn(*args: Any, **kwargs: Any) -> str:
+            result = original_fn(*args, **kwargs)
+            command = kwargs.get("command") or (args[0] if args else "")
+            return injector.inject_shell_result(str(command), str(result))
+
+    return StructuredTool.from_function(
+        func=wrapped_fn,
+        name=tool.name,
+        description=tool.description,
+        args_schema=getattr(tool, "args_schema", None),
+    )
 
 
 class _TraceCallbackHandler:
@@ -212,7 +330,7 @@ class LangChainAdapter:
         return hasattr(self._runnable, "ainvoke") or hasattr(self._runnable, "invoke")
 
     async def run(self, task: AgentTask, environment: Environment) -> AgentTrace:
-        trace = AgentTrace(task=task)
+        trace = AgentTrace(task=task, environment=environment)
         handler = _build_callback_handler(trace)
 
         input_data = self._build_input(task.instruction)

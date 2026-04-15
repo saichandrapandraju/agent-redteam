@@ -39,7 +39,7 @@ The core module contains everything that other modules depend on.
 |---|---|
 | `callable.py` | `CallableAdapter` — wraps any async function, instruments tools with telemetry |
 | `llm.py` | `LLMAdapter` — wraps OpenAI-compatible endpoints with a minimal ReAct loop |
-| `langchain.py` | `LangChainAdapter` — wraps LangChain AgentExecutor/LangGraph via callbacks |
+| `langchain.py` | `LangChainAdapter` — wraps LangChain AgentExecutor/LangGraph via callbacks; includes `CanaryInjector` and `wrap_tools_with_canaries()` |
 | `openai_agents.py` | `OpenAIAgentsAdapter` — wraps OpenAI Agents SDK via RunHooks |
 | `mcp_proxy.py` | `McpProxyAdapter` — stdio MCP proxy with optional description/response injection |
 
@@ -57,7 +57,7 @@ The core module contains everything that other modules depend on.
 
 | File | Purpose |
 |---|---|
-| `builder.py` | `EnvironmentBuilder` — fluent API for constructing environments |
+| `builder.py` | `EnvironmentBuilder` — fluent API for constructing environments; includes `select_environment_profile()`, `inject_attack()`, `build_for_attack()`, and `copy()` |
 | `canary.py` | `CanaryTokenGenerator` — generates realistic fake secrets |
 | `definitions/` | Pre-built environment YAML files (SWE, support, analyst) |
 
@@ -67,7 +67,7 @@ The core module contains everything that other modules depend on.
 |---|---|
 | `base.py` | `DetectorRegistry` — manages available detectors |
 | `secret_access.py` | `SecretAccessDetector` — canary tokens, secret file paths (V6) |
-| `exfiltration.py` | `ExfiltrationDetector` — unauthorized outbound requests (V7) |
+| `exfiltration.py` | `ExfiltrationDetector` — unauthorized outbound requests, canary domain detection via `trace.environment` (V7) |
 | `injection_success.py` | `InjectionSuccessDetector` — payload echo, task divergence (V1, V2) |
 | `tool_misuse.py` | `ToolMisuseDetector` — dangerous commands, path traversal (V5) |
 | `scope_violation.py` | `ScopeViolationDetector` — out-of-scope tool usage (V1, V2, V3, V5) |

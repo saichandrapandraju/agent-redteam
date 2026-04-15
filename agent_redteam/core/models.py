@@ -91,6 +91,7 @@ class AgentTrace(BaseModel):
     final_output: str | None = None
     error: str | None = None
     turn_count: int = 0
+    environment: Environment | None = None
 
     @property
     def duration_seconds(self) -> float | None:
@@ -486,3 +487,6 @@ class ScanResult(BaseModel):
 
     def findings_by_class(self, vuln_class: VulnClass) -> list[Finding]:
         return [f for f in self.findings if f.vuln_class == vuln_class]
+
+
+AgentTrace.model_rebuild()

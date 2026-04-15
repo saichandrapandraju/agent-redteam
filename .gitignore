@@ -46,3 +46,6 @@ site/
 
 # OS
 Thumbs.db
+
+validation_outputs/
+related_projects/

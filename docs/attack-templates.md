@@ -17,8 +17,8 @@ flowchart LR
 1. Templates are loaded from YAML files by the `AttackRegistry`
 2. The `AttackPlanner` selects templates based on scan config and agent capabilities
 3. Each template is instantiated into an `Attack` with resolved parameters
-4. The `EnvironmentBuilder` constructs a synthetic environment from the template
-5. The `AttackExecutor` runs the agent in that environment
+4. The `Scanner` selects a base environment profile matching the agent's tools (via `select_environment_profile`), then the `AttackExecutor` calls `env_builder.build_for_attack(attack)` to merge the template's `environment_setup` into an isolated per-attack environment with canary tokens
+5. The `AttackExecutor` runs the agent in that environment and attaches it to the `AgentTrace`
 
 ## Template Catalog
 

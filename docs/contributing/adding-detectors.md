@@ -160,6 +160,9 @@ trace.events_by_type(EventType.NETWORK_REQUEST)
 trace.task                      # The AgentTask
 trace.task.expected_tools       # Tools the agent was supposed to use
 trace.final_output              # Agent's final response text
+trace.environment               # The Environment used for this run (optional)
+trace.environment.network_rules # Network allow/deny/canary rules
+trace.environment.canary_tokens # Canary tokens seeded in this environment
 ```
 
 ## Existing Detectors as Examples
@@ -167,7 +170,7 @@ trace.final_output              # Agent's final response text
 | Detector | Complexity | Good Example Of |
 |---|---|---|
 | `SecretAccessDetector` | Simple | Pattern matching against canary tokens |
-| `ExfiltrationDetector` | Medium | Cross-referencing events with environment rules |
+| `ExfiltrationDetector` | Medium | Cross-referencing events with `trace.environment` network rules and canary domains |
 | `InjectionSuccessDetector` | Medium | Comparing agent behavior against expected behavior |
 | `ToolMisuseDetector` | Complex | Regex-based command analysis (23 patterns) |
 | `ScopeViolationDetector` | Simple | Comparing actual vs expected tool usage |

@@ -34,12 +34,12 @@ from agent_redteam.core.models import (
     Event,
     Signal,
 )
-from agent_redteam.environments.builder import EnvironmentBuilder
 from agent_redteam.runner.budget import BudgetTracker
 
 if TYPE_CHECKING:
     from agent_redteam.core.models import Attack, Environment
     from agent_redteam.core.protocols import AgentAdapter, SignalDetector
+    from agent_redteam.environments.builder import EnvironmentBuilder
 
 try:
     import httpx
@@ -157,21 +157,32 @@ class AdaptiveExecutor:
         self,
         adapter: AgentAdapter,
         detectors: list[SignalDetector],
-        base_environment: Environment,
-        budget: BudgetConfig,
-        attacker_llm_config: dict[str, Any],
+        env_builder: EnvironmentBuilder | None = None,
+        budget: BudgetConfig | None = None,
+        attacker_llm_config: dict[str, Any] | None = None,
         *,
+        base_environment: Environment | None = None,
         max_adaptive_turns: int = 5,
         trials_per_attack: int = 1,
     ) -> None:
         self._adapter = adapter
         self._detectors = detectors
-        self._base_env = base_environment
-        self._budget = budget
-        self._tracker = BudgetTracker(budget)
+        self._budget = budget or BudgetConfig()
+        self._tracker = BudgetTracker(self._budget)
         self._max_turns = max_adaptive_turns
         self._trials = trials_per_attack
-        self._attacker = AttackerLLM(**attacker_llm_config)
+        self._attacker = AttackerLLM(**(attacker_llm_config or {}))
+
+        if env_builder is not None:
+            self._env_builder = env_builder
+        elif base_environment is not None:
+            from agent_redteam.attacks.executor import _env_builder_from_environment
+
+            self._env_builder = _env_builder_from_environment(base_environment)
+        else:
+            from agent_redteam.environments.builder import EnvironmentBuilder
+
+            self._env_builder = EnvironmentBuilder("default")
 
     async def execute_suite(
         self,
@@ -197,7 +208,7 @@ class AdaptiveExecutor:
 
     async def _execute_adaptive(self, attack: Attack) -> AttackResult:
         """Execute a multi-turn adaptive attack."""
-        env = self._build_env(attack)
+        env = self._env_builder.build_for_attack(attack)
         objective = attack.template.description
         initial_instruction = attack.resolved_task.instruction if attack.resolved_task else "(no task)"
 
@@ -285,27 +296,6 @@ class AdaptiveExecutor:
             except Exception:
                 pass
         return signals
-
-    def _build_env(self, attack: Attack) -> Environment:
-        builder = EnvironmentBuilder(f"adaptive_{attack.template_id}")
-        for tool in self._base_env.tools:
-            builder.add_tool(tool)
-        for f in self._base_env.files:
-            builder.add_file(f.path, f.content, f.is_secret)
-        builder._canaries.extend(self._base_env.canary_tokens)
-
-        setup = attack.template.environment_setup
-        attack_id = str(attack.id)
-        if "emails" in setup:
-            builder.inject_attack_emails(setup["emails"], attack.resolved_payload, attack_id)
-        if "files" in setup:
-            builder.inject_attack_files(setup["files"], attack.resolved_payload, attack_id)
-        if "memory" in setup:
-            builder.inject_attack_memory(setup["memory"], attack.resolved_payload, attack_id)
-        if "secrets" in setup:
-            builder.inject_attack_secrets(setup["secrets"])
-
-        return builder.build()
 
     @property
     def budget_summary(self) -> dict[str, Any]:

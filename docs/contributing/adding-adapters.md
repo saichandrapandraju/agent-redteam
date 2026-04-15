@@ -35,7 +35,8 @@ class AgentAdapter(Protocol):
 1. **Receive** an `AgentTask` and `Environment` from the executor
 2. **Run** the agent with instrumented tools
 3. **Capture** all actions into `Event` objects
-4. **Return** an `AgentTrace` containing the complete event sequence
+4. **Attach** the `Environment` to the `AgentTrace` (via `environment=environment`) so detectors can access network rules, canary domains, and other per-run context
+5. **Return** an `AgentTrace` containing the complete event sequence
 
 ## Step-by-Step
 
@@ -98,6 +99,7 @@ class MyFrameworkAdapter:
             task=task,
             events=events,
             final_output=str(result),
+            environment=environment,
         )
 
     def _build_tools(self, environment, events):

@@ -21,7 +21,7 @@ from agent_redteam.core.models import (
     ScanResult,
 )
 from agent_redteam.detectors.base import DetectorRegistry
-from agent_redteam.environments.builder import EnvironmentBuilder
+from agent_redteam.environments.builder import EnvironmentBuilder, select_environment_profile
 from agent_redteam.reporting.renderer import ReportRenderer
 from agent_redteam.scoring.engine import ScoringEngine
 from agent_redteam.taxonomy.vulns import get_vuln_name, get_vuln_severity
@@ -61,13 +61,20 @@ class Scanner:
         self._scoring = scoring_engine or ScoringEngine()
         self._renderer = report_renderer or ReportRenderer().defaults()
 
-        # Build base environment with canary tokens
+        profile = select_environment_profile(config.agent_capabilities)
+        logger.info("Selected environment profile: %s", profile)
+
         env_builder = EnvironmentBuilder(config.profile.value)
         env_builder.add_canary_secrets()
-        env_builder.add_files_from_definition("swe_agent")
+        env_builder.add_files_from_definition(profile)
         for tool in config.agent_capabilities.tools:
             env_builder.add_tools([tool.name])
+        self._env_builder = env_builder
         self._base_env = env_builder.build()
+
+        allowed_domains = [r.domain for r in self._base_env.network_rules if r.allowed]
+        if not allowed_domains:
+            allowed_domains = ["github.com", "pypi.org"]
 
         self._attacker_llm_config = attacker_llm_config
 
@@ -76,7 +83,7 @@ class Scanner:
                 DetectorRegistry()
                 .defaults(
                     canary_tokens=self._base_env.canary_tokens,
-                    allowed_domains=["github.com", "pypi.org"],
+                    allowed_domains=allowed_domains,
                     judge_config=judge_config,
                 )
                 .all_detectors
@@ -119,7 +126,7 @@ class Scanner:
             executor = AdaptiveExecutor(
                 adapter=self._adapter,
                 detectors=self._detectors,
-                base_environment=self._base_env,
+                env_builder=self._env_builder,
                 budget=self._config.budget,
                 attacker_llm_config=self._attacker_llm_config,
                 trials_per_attack=self._config.budget.trials_per_attack,
@@ -128,7 +135,7 @@ class Scanner:
             executor = AttackExecutor(
                 adapter=self._adapter,
                 detectors=self._detectors,
-                base_environment=self._base_env,
+                env_builder=self._env_builder,
                 budget=self._config.budget,
                 trials_per_attack=self._config.budget.trials_per_attack,
             )

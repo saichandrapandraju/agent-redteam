@@ -16,14 +16,30 @@ from agent_redteam.core.models import (
     BudgetConfig,
     Signal,
 )
-from agent_redteam.environments.builder import EnvironmentBuilder
 from agent_redteam.runner.budget import BudgetTracker
 
 if TYPE_CHECKING:
     from agent_redteam.core.models import Attack, Environment
     from agent_redteam.core.protocols import AgentAdapter, SignalDetector
+    from agent_redteam.environments.builder import EnvironmentBuilder
 
 logger = logging.getLogger("agent_redteam.executor")
+
+
+def _env_builder_from_environment(env: Environment) -> EnvironmentBuilder:
+    """Convert a pre-built Environment back to a builder for backward compat."""
+    from agent_redteam.environments.builder import EnvironmentBuilder
+
+    builder = EnvironmentBuilder(env.name)
+    for tool in env.tools:
+        builder.add_tool(tool)
+    for f in env.files:
+        builder.add_file(f.path, f.content, f.is_secret)
+    builder._canaries.extend(env.canary_tokens)
+    builder._emails.extend(env.emails)
+    builder._network_rules.extend(env.network_rules)
+    builder._default_network_policy = env.default_network_policy
+    return builder
 
 
 class AttackExecutor:
@@ -33,16 +49,26 @@ class AttackExecutor:
         self,
         adapter: AgentAdapter,
         detectors: list[SignalDetector],
-        base_environment: Environment,
-        budget: BudgetConfig,
+        env_builder: EnvironmentBuilder | None = None,
+        budget: BudgetConfig | None = None,
         trials_per_attack: int = 1,
+        *,
+        base_environment: Environment | None = None,
     ) -> None:
         self._adapter = adapter
         self._detectors = detectors
-        self._base_env = base_environment
-        self._budget = budget
+        self._budget = budget or BudgetConfig()
         self._trials = trials_per_attack
-        self._tracker = BudgetTracker(budget)
+        self._tracker = BudgetTracker(self._budget)
+
+        if env_builder is not None:
+            self._env_builder = env_builder
+        elif base_environment is not None:
+            self._env_builder = _env_builder_from_environment(base_environment)
+        else:
+            from agent_redteam.environments.builder import EnvironmentBuilder
+
+            self._env_builder = EnvironmentBuilder("default")
 
     async def execute_suite(
         self,
@@ -81,7 +107,7 @@ class AttackExecutor:
 
     async def _execute_single(self, attack: Attack) -> AttackResult:
         """Execute one attack and detect signals."""
-        env = self._build_env_for_attack(attack)
+        env = self._env_builder.build_for_attack(attack)
         task = attack.resolved_task
 
         if task is None:
@@ -130,34 +156,6 @@ class AttackExecutor:
             signals=signals,
             succeeded=succeeded,
         )
-
-    def _build_env_for_attack(self, attack: Attack) -> Environment:
-        """Build an environment with the attack payload injected."""
-        builder = EnvironmentBuilder(f"attack_{attack.template_id}")
-
-        # Copy base environment
-        for tool in self._base_env.tools:
-            builder.add_tool(tool)
-        for f in self._base_env.files:
-            builder.add_file(f.path, f.content, f.is_secret)
-        builder._canaries.extend(self._base_env.canary_tokens)
-
-        setup = attack.template.environment_setup
-        attack_id = str(attack.id)
-
-        if "emails" in setup:
-            builder.inject_attack_emails(setup["emails"], attack.resolved_payload, attack_id)
-
-        if "files" in setup:
-            builder.inject_attack_files(setup["files"], attack.resolved_payload, attack_id)
-
-        if "memory" in setup:
-            builder.inject_attack_memory(setup["memory"], attack.resolved_payload, attack_id)
-
-        if "secrets" in setup:
-            builder.inject_attack_secrets(setup["secrets"])
-
-        return builder.build()
 
     @property
     def budget_summary(self) -> dict[str, Any]:

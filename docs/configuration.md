@@ -152,7 +152,11 @@ The framework includes pre-built environment definitions:
 | `customer_support_agent` | CRM, email, knowledge base tools | Testing support bots |
 | `data_analyst_agent` | SQL, file I/O, HTTP, shell tools | Testing data agents |
 
-These are used by attack templates to construct realistic synthetic environments.
+### Automatic Environment Selection
+
+The `Scanner` automatically selects the best environment profile based on the agent's declared tools via `select_environment_profile(agent_capabilities)`. For example, if your agent declares `send_email` and `lookup_customer` tools, the framework selects `customer_support_agent`; if it declares `sql_query` or `db_query`, it selects `data_analyst_agent`; otherwise it defaults to `swe_agent`.
+
+At execution time, each attack template's `environment_setup` is merged into the base profile via `EnvironmentBuilder.inject_attack()`, producing an isolated per-attack environment with canary secrets, poisoned data, and network rules.
 
 ## Full Custom Config
 
