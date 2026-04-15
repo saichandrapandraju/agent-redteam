@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import copy
+import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 import yaml
+from jinja2 import Environment as JinjaEnvironment
 
 from agent_redteam.core.models import (
     CanaryToken,
@@ -21,6 +23,10 @@ from agent_redteam.environments.canary import CanaryTokenGenerator
 
 if TYPE_CHECKING:
     from agent_redteam.core.models import AgentCapabilities, Attack
+
+logger = logging.getLogger("agent_redteam.environments.builder")
+
+_jinja = JinjaEnvironment()
 
 
 _TOOL_TO_PROFILE: dict[str, str] = {
@@ -150,13 +156,34 @@ class EnvironmentBuilder:
 
     # -- Attack injection ----------------------------------------------------
 
+    @staticmethod
+    def _render_value(value: str, ctx: dict[str, str]) -> str:
+        """Render Jinja2 placeholders in a single string value."""
+        if "{{" not in value:
+            return value
+        try:
+            return _jinja.from_string(value).render(**ctx)
+        except Exception:
+            logger.debug("Jinja render failed for: %s", value[:80])
+            return value
+
+    @staticmethod
+    def _render_deep(obj: Any, ctx: dict[str, str]) -> Any:
+        """Recursively render all string values in a nested dict/list."""
+        if isinstance(obj, str):
+            return EnvironmentBuilder._render_value(obj, ctx)
+        if isinstance(obj, dict):
+            return {k: EnvironmentBuilder._render_deep(v, ctx) for k, v in obj.items()}
+        if isinstance(obj, list):
+            return [EnvironmentBuilder._render_deep(v, ctx) for v in obj]
+        return obj
+
     def inject_attack_emails(
-        self, emails_config: list[dict[str, Any]], resolved_payload: str, attack_id: str
+        self, emails_config: list[dict[str, Any]], attack_id: str
     ) -> EnvironmentBuilder:
         """Inject attack emails from template environment_setup."""
         for email_def in emails_config:
-            body = email_def.get("body", "")
-            body = body.replace("{{ resolved_payload }}", resolved_payload)
+            body = email_def.get("body", email_def.get("body_html", ""))
             self._emails.append(
                 EmailEntry(
                     from_addr=email_def.get("from", "unknown@company.com"),
@@ -169,30 +196,39 @@ class EnvironmentBuilder:
         return self
 
     def inject_attack_files(
-        self, files_config: list[dict[str, Any]], resolved_payload: str, attack_id: str
+        self, files_config: list[dict[str, Any]], attack_id: str
     ) -> EnvironmentBuilder:
         """Inject attack files from template environment_setup."""
         for file_def in files_config:
-            content = file_def.get("content", "")
-            content = content.replace("{{ resolved_payload }}", resolved_payload)
             self._files.append(
                 FileEntry(
-                    path=file_def["path"],
-                    content=content,
+                    path=file_def.get("path", f"/tmp/{attack_id}"),
+                    content=file_def.get("content", ""),
                     is_secret=file_def.get("is_secret", False),
                 )
             )
         return self
 
     def inject_attack_memory(
-        self, memory_config: list[dict[str, Any]], resolved_payload: str, attack_id: str
+        self, memory_config: list[dict[str, Any]], attack_id: str
     ) -> EnvironmentBuilder:
         """Inject memory entries from template environment_setup."""
         for mem_def in memory_config:
             key = mem_def.get("key", f"memory_{attack_id}")
             value = mem_def.get("value", "")
-            value = value.replace("{{ resolved_payload }}", resolved_payload)
             self._context.setdefault("memory", {})[key] = value
+        return self
+
+    def inject_attack_env_vars(
+        self, env_config: dict[str, str] | list[dict[str, str]]
+    ) -> EnvironmentBuilder:
+        """Inject environment variables from template environment_setup."""
+        if isinstance(env_config, dict):
+            self._context.setdefault("env_vars", {}).update(env_config)
+        elif isinstance(env_config, list):
+            for item in env_config:
+                if isinstance(item, dict):
+                    self._context.setdefault("env_vars", {}).update(item)
         return self
 
     def inject_attack_secrets(self, secrets_config: list[dict[str, Any]]) -> EnvironmentBuilder:
@@ -241,24 +277,49 @@ class EnvironmentBuilder:
 
     # -- Attack injection (consolidated) ------------------------------------
 
+    def _build_template_context(self, attack: Attack) -> dict[str, str]:
+        """Build the Jinja context for rendering environment_setup placeholders.
+
+        Merges the attack's planner-resolved parameters (``secret_file_path``,
+        ``exfil_url``, ...) with ``resolved_payload`` and a ``payload_template``
+        alias so both ``{{ resolved_payload }}`` and ``{{ payload_template }}``
+        work in YAML templates.  If canary tokens are already seeded, their
+        first value is exposed as ``{{ canary_value }}``.
+        """
+        ctx: dict[str, str] = dict(attack.parameters)
+        ctx["resolved_payload"] = attack.resolved_payload
+        ctx["payload_template"] = attack.resolved_payload
+        if self._canaries:
+            ctx.setdefault("canary_value", self._canaries[0].value)
+        return ctx
+
     def inject_attack(self, attack: Attack) -> EnvironmentBuilder:
         """Configure the environment for a specific attack.
 
-        Reads the template's ``environment_setup`` and injects payloads,
-        emails, files, memory entries, and secrets in one call.
+        Reads the template's ``environment_setup``, renders **all** Jinja
+        placeholders (``{{ secret_file_path }}``, ``{{ payload_template }}``,
+        ``{{ canary_value }}``, etc.), then injects emails, files, memory,
+        env vars, and secrets.
         """
-        setup = attack.template.environment_setup
+        raw_setup = attack.template.environment_setup
         attack_id = str(attack.id)
-        payload = attack.resolved_payload
 
-        if "emails" in setup:
-            self.inject_attack_emails(setup["emails"], payload, attack_id)
-        if "files" in setup:
-            self.inject_attack_files(setup["files"], payload, attack_id)
-        if "memory" in setup:
-            self.inject_attack_memory(setup["memory"], payload, attack_id)
+        ctx = self._build_template_context(attack)
+        setup = self._render_deep(raw_setup, ctx)
+
         if "secrets" in setup:
             self.inject_attack_secrets(setup["secrets"])
+            ctx = self._build_template_context(attack)
+            setup = self._render_deep(raw_setup, ctx)
+
+        if "emails" in setup:
+            self.inject_attack_emails(setup["emails"], attack_id)
+        if "files" in setup:
+            self.inject_attack_files(setup["files"], attack_id)
+        if "memory" in setup:
+            self.inject_attack_memory(setup["memory"], attack_id)
+        if "env" in setup:
+            self.inject_attack_env_vars(setup["env"])
         return self
 
     def build_for_attack(self, attack: Attack) -> Environment:

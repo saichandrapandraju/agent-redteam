@@ -59,8 +59,8 @@ class TestEnvironmentBuilder:
         assert any(r.is_canary for r in env.network_rules)
 
     def test_inject_attack_emails(self):
-        emails = [{"from": "attacker@evil.com", "subject": "Hi", "body": "{{ resolved_payload }}"}]
-        env = EnvironmentBuilder("test").inject_attack_emails(emails, "PAYLOAD_HERE", "attack_1").build()
+        emails = [{"from": "attacker@evil.com", "subject": "Hi", "body": "PAYLOAD_HERE"}]
+        env = EnvironmentBuilder("test").inject_attack_emails(emails, "attack_1").build()
         assert len(env.emails) == 1
         assert "PAYLOAD_HERE" in env.emails[0].body
         assert env.emails[0].is_malicious

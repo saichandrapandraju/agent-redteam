@@ -70,14 +70,36 @@ class _TraceRunHooks(RunHooks):  # type: ignore[misc]
     async def on_tool_start(self, context: Any, agent: Any, tool: Any) -> None:
         self._turn += 1
         tool_name = getattr(tool, "name", str(tool))
+        tool_args = self._extract_tool_args(tool)
         self._trace.events.append(
             Event(
                 event_type=EventType.TOOL_CALL,
                 trust_boundary=TrustBoundary.B4_AGENT_TO_TOOL,
                 tool_name=tool_name,
+                tool_args=tool_args,
                 turn_number=self._turn,
             )
         )
+
+    @staticmethod
+    def _extract_tool_args(tool: Any) -> dict[str, Any] | None:
+        """Best-effort extraction of tool arguments from the SDK tool object."""
+        for attr in ("model_input", "input", "args", "arguments", "kwargs"):
+            val = getattr(tool, attr, None)
+            if val is not None:
+                if isinstance(val, dict):
+                    return val
+                if isinstance(val, str):
+                    import json
+
+                    try:
+                        parsed = json.loads(val)
+                        if isinstance(parsed, dict):
+                            return parsed
+                    except (json.JSONDecodeError, ValueError):
+                        return {"input": val}
+                    return {"input": val}
+        return None
 
     async def on_tool_end(self, context: Any, agent: Any, tool: Any, result: Any) -> None:
         tool_name = getattr(tool, "name", str(tool))

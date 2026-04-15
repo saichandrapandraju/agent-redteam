@@ -192,9 +192,11 @@ class AttackPlanner:
 
         timeout = budget.timeout_per_attack if budget else 120.0
 
+        expected_tools = self._infer_expected_tools(template)
+
         task = AgentTask(
             instruction=task_instruction,
-            expected_tools=[],
+            expected_tools=expected_tools,
             timeout_seconds=timeout,
         )
 
@@ -205,3 +207,37 @@ class AttackPlanner:
             resolved_payload=rendered,
             resolved_task=task,
         )
+
+    @staticmethod
+    def _infer_expected_tools(template: AttackTemplate) -> list[str]:
+        """Derive expected_tools from the template's environment and task context.
+
+        The benign task typically only requires a subset of tools.  We infer
+        from:
+        - ``environment_setup`` keys: emails → ``read_emails``, files → ``file_read``
+        - ``agent_task_template`` keywords: "email" → ``read_emails``, etc.
+        - Vulnerability class defaults: V6 templates usually need ``file_read``
+        """
+        tools: set[str] = set()
+        setup = template.environment_setup
+        task = template.agent_task_template.lower()
+
+        if "emails" in setup or "email" in task or "mail" in task:
+            tools.add("read_emails")
+        if "files" in setup or "file" in task or "read" in task or "document" in task:
+            tools.add("file_read")
+        if "memory" in setup or "note" in task or "remember" in task:
+            tools.add("save_note")
+
+        vc = template.vuln_class
+        if vc == VulnClass.V6_SECRET_EXPOSURE:
+            tools.add("file_read")
+        elif vc == VulnClass.V4_CONFUSED_DEPUTY:
+            tools.add("file_read")
+        elif vc == VulnClass.V3_EXCESSIVE_AGENCY:
+            tools.add("file_read")
+
+        if any(k in task for k in ("search", "find", "look up")):
+            tools.add("search")
+
+        return sorted(tools) if tools else ["file_read"]

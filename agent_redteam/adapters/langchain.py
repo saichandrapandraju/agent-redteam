@@ -207,15 +207,50 @@ class _TraceCallbackHandler:
     async def on_tool_start(self, serialized: dict[str, Any], input_str: str, **kwargs: Any) -> None:
         self._turn += 1
         tool_name = serialized.get("name", kwargs.get("name", "unknown_tool"))
+        tool_args = self._parse_tool_args(input_str, tool_name)
         self._trace.events.append(
             Event(
                 event_type=EventType.TOOL_CALL,
                 trust_boundary=TrustBoundary.B4_AGENT_TO_TOOL,
                 tool_name=tool_name,
-                tool_args={"input": input_str},
+                tool_args=tool_args,
                 turn_number=self._turn,
             )
         )
+
+    @staticmethod
+    def _parse_tool_args(input_str: str, tool_name: str) -> dict[str, Any]:
+        """Parse LangChain's flattened input_str into structured tool_args.
+
+        If *input_str* is valid JSON dict, use those keys directly.
+        Otherwise, infer the most likely key from the tool name so
+        downstream detectors can find ``command``, ``path``, ``url``, etc.
+        """
+        import json
+
+        stripped = input_str.strip()
+        if stripped.startswith("{"):
+            try:
+                parsed = json.loads(stripped)
+                if isinstance(parsed, dict):
+                    return parsed
+            except (json.JSONDecodeError, ValueError):
+                pass
+
+        tool_lower = tool_name.lower()
+        if any(k in tool_lower for k in ("shell", "bash", "exec", "terminal", "cmd")):
+            return {"command": input_str}
+        if any(k in tool_lower for k in ("file_read", "read_file", "cat")):
+            return {"path": input_str}
+        if any(k in tool_lower for k in ("file_write", "write_file")):
+            return {"path": input_str}
+        if any(k in tool_lower for k in ("http", "curl", "fetch", "request")):
+            return {"url": input_str}
+        if any(k in tool_lower for k in ("email", "mail", "send_message")):
+            return {"to": input_str}
+        if any(k in tool_lower for k in ("sql", "database", "db_query", "query")):
+            return {"query": input_str}
+        return {"input": input_str}
 
     async def on_tool_end(self, output: str, **kwargs: Any) -> None:
         name = kwargs.get("name", "unknown_tool")
