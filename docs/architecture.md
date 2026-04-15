@@ -21,6 +21,7 @@ flowchart TB
     Reporting --> JSON[JSON Report]
     Reporting --> Markdown[Markdown Report]
     Reporting --> Terminal[Terminal Report]
+    Reporting --> HTML[HTML Report]
 ```
 
 ## Component Overview
@@ -287,7 +288,7 @@ agent_redteam/
     runtime.py        # EnvironmentRuntime — stateful tool execution engine (filesystem, shell, HTTP, SQL, email)
     canary.py         # CanaryTokenGenerator
   pytest_plugin/      # pytest fixture
-  reporting/          # JSON, Markdown, Terminal formatters
+  reporting/          # JSON, Markdown, Terminal, HTML formatters
   runner/
     scanner.py        # Scanner orchestrator (single-shot + adaptive)
     budget.py         # BudgetTracker

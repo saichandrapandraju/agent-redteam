@@ -114,6 +114,16 @@ terminal_report = scanner.report(result, format="terminal")
 print(terminal_report)
 ```
 
+### HTML
+
+Self-contained interactive dashboard — a single `.html` file you can open in any browser. Includes a score gauge, per-class bar chart, filterable findings table, behavioral risk cards, and collapsible attack drill-downs with trace timelines. Supports dark/light theme toggle.
+
+```python
+html_report = scanner.report(result, format="html")
+with open("scan_report.html", "w") as f:
+    f.write(html_report)
+```
+
 ## Programmatic Access
 
 The `ScanResult` object exposes everything programmatically:

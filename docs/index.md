@@ -41,6 +41,7 @@ flowchart LR
         JSON[JSON]
         MD[Markdown]
         Term[Terminal]
+        HTML[HTML]
     end
     LLM --> Planner
     Agent --> Planner
@@ -53,6 +54,7 @@ flowchart LR
     Scoring --> JSON
     Scoring --> MD
     Scoring --> Term
+    Scoring --> HTML
 ```
 
 1. **You provide** an agent (or just a model endpoint)
@@ -99,7 +101,7 @@ See the [Getting Started](getting-started.md) guide for the full walkthrough.
 | V8 — Memory Poisoning | 8 | False facts, instruction overrides, trust injection |
 | V12 — Supply Chain (MCP) | 8 | Poisoned tool descriptions, credential harvesting, SSRF, name squatting |
 
-**86 attack templates** | **9 signal detectors + optional LLM judge** | **6 framework adapters + HttpAdapter** | **Stateful environment runtime** | **Adaptive multi-turn attacks** | **3 report formats**
+**86 attack templates** | **9 signal detectors + optional LLM judge** | **6 framework adapters + HttpAdapter** | **Stateful environment runtime** | **Adaptive multi-turn attacks** | **4 report formats**
 
 ## License
 

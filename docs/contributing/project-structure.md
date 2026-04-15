@@ -97,6 +97,8 @@ The core module contains everything that other modules depend on.
 | `json_fmt.py` | `JsonFormatter` — machine-readable JSON output |
 | `markdown.py` | `MarkdownFormatter` — human-readable Markdown report |
 | `terminal.py` | `TerminalFormatter` — colored terminal output via rich |
+| `html.py` | `HtmlFormatter` — self-contained interactive HTML dashboard (open in any browser) |
+| `behavioral.py` | `analyze_behavioral_risks()` — aggregates trace data into behavioral risk narratives |
 
 ### `agent_redteam/runner/` — Orchestration
 

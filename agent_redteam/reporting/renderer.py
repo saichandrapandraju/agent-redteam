@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from agent_redteam.reporting.html import HtmlFormatter
 from agent_redteam.reporting.json_fmt import JsonFormatter
 from agent_redteam.reporting.markdown import MarkdownFormatter
 from agent_redteam.reporting.terminal import TerminalFormatter
@@ -27,6 +28,7 @@ class ReportRenderer:
         self.register(JsonFormatter())
         self.register(MarkdownFormatter())
         self.register(TerminalFormatter())
+        self.register(HtmlFormatter())
         return self
 
     def render(self, result: ScanResult, fmt: str = "markdown") -> str:

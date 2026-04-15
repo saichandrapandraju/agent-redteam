@@ -66,6 +66,10 @@ async def main():
     with open("scan_result.json", "w") as f:
         f.write(scanner.report(result, format="json"))
 
+    # Save interactive HTML report
+    with open("scan_report.html", "w") as f:
+        f.write(scanner.report(result, format="html"))
+
 asyncio.run(main())
 ```
 

@@ -72,7 +72,7 @@ result = await Scanner(CallableAdapter(my_agent), ScanConfig.quick()).run()
 3. Each attack runs in a synthetic environment with canary tokens (fake secrets)
 4. 10 detectors (8 rule-based + MCP security + optional LLM judge) analyze the trace
 5. A scoring engine computes per-class scores with confidence intervals
-6. Reports (JSON, Markdown, Terminal) give you a risk tier and actionable findings
+6. Reports (JSON, Markdown, Terminal, HTML) give you a risk tier and actionable findings
 
 ## Development
 
