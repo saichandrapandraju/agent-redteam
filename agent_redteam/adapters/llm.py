@@ -4,6 +4,9 @@ Lowest-barrier entry point: just provide a base URL, API key, and model name.
 The adapter builds a minimal ReAct agent loop around the model, wires up the
 instrumented tools, and exposes it through the standard AgentAdapter interface.
 
+Every LLM request/response turn and every tool call/result is captured as an
+``Event`` in the ``AgentTrace``, giving full visibility into the conversation.
+
     from agent_redteam.adapters import LLMAdapter
 
     adapter = LLMAdapter(
@@ -17,15 +20,18 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from collections.abc import AsyncIterator
+from datetime import UTC, datetime
 
 try:
     import httpx
 except ImportError:
     httpx = None  # type: ignore[assignment]
 
-from agent_redteam.adapters.callable import CallableAdapter
+from agent_redteam.core.enums import EventType, TrustBoundary
 from agent_redteam.core.models import AgentTask, AgentTrace, Environment, Event
+from agent_redteam.environments.runtime import EnvironmentRuntime
 
 logger = logging.getLogger("agent_redteam.adapters.llm")
 
@@ -38,17 +44,48 @@ _DEFAULT_SYSTEM_PROMPT = (
     "Only use tools that are necessary for the task."
 )
 
+_CODE_BLOCK_RE = re.compile(r"```(?:json)?\s*\n?(.*?)\n?```", re.DOTALL)
+
+_FILE_READ_TOOLS = frozenset({"file_read", "read_file"})
+_HTTP_TOOLS = frozenset({"http_request", "curl", "fetch", "requests", "http_get"})
+
 
 def _extract_tool_call(text: str) -> dict | None:
-    try:
-        start = text.find("{")
-        end = text.rfind("}") + 1
-        if start >= 0 and end > start:
-            candidate = json.loads(text[start:end])
-            if "tool" in candidate:
-                return candidate
-    except (json.JSONDecodeError, ValueError):
-        pass
+    """Extract the first valid tool-call JSON from model output.
+
+    Handles markdown code blocks, multiple JSON objects on separate lines,
+    and bare JSON mixed with prose.
+    """
+    candidates: list[str] = []
+
+    for m in _CODE_BLOCK_RE.finditer(text):
+        candidates.append(m.group(1).strip())
+
+    if not candidates:
+        candidates.append(text)
+
+    for raw in candidates:
+        for line in raw.split("\n"):
+            line = line.strip()
+            if not line.startswith("{"):
+                continue
+            try:
+                obj = json.loads(line)
+                if "tool" in obj:
+                    return obj
+            except (json.JSONDecodeError, ValueError):
+                pass
+
+        try:
+            start = raw.find("{")
+            end = raw.find("}", start)
+            if start >= 0 and end > start:
+                obj = json.loads(raw[start : end + 1])
+                if "tool" in obj:
+                    return obj
+        except (json.JSONDecodeError, ValueError):
+            pass
+
     return None
 
 
@@ -95,7 +132,9 @@ class LLMAdapter:
         timeout: float = 60.0,
     ) -> None:
         if httpx is None:
-            raise ImportError("LLMAdapter requires httpx. Install it with: pip install agent-redteam[http]")
+            raise ImportError(
+                "LLMAdapter requires httpx. Install with: pip install agent-redteam[http]"
+            )
         self._base_url = base_url.rstrip("/")
         self._api_key = api_key
         self._model = model
@@ -103,7 +142,6 @@ class LLMAdapter:
         self._max_turns = max_turns
         self._temperature = temperature
         self._timeout = timeout
-        self._callable_adapter: CallableAdapter | None = None
 
     @property
     def adapter_name(self) -> str:
@@ -124,83 +162,146 @@ class LLMAdapter:
             return False
 
     async def run(self, task: AgentTask, environment: Environment) -> AgentTrace:
-        adapter = self._get_callable_adapter()
-        return await adapter.run(task, environment)
+        trace = AgentTrace(task=task, environment=environment)
+        runtime = EnvironmentRuntime(environment)
 
-    async def run_streaming(self, task: AgentTask, environment: Environment) -> AsyncIterator[Event]:
-        adapter = self._get_callable_adapter()
-        async for event in adapter.run_streaming(task, environment):
-            yield event
+        tool_descriptions = "\n".join(
+            f"- {td.name}(**kwargs): call with keyword arguments"
+            for td in environment.tools
+        )
+        system_prompt = self._system_prompt_template.format(tool_list=tool_descriptions)
+        tool_names = {td.name for td in environment.tools}
 
-    def _get_callable_adapter(self) -> CallableAdapter:
-        if self._callable_adapter is None:
-            self._callable_adapter = CallableAdapter(
-                self._make_agent_fn(),
-                name=self.adapter_name,
-            )
-        return self._callable_adapter
+        trace.events.append(Event(
+            event_type=EventType.LLM_PROMPT,
+            trust_boundary=TrustBoundary.B1_USER_TO_AGENT,
+            content=system_prompt,
+            metadata={"role": "system"},
+            turn_number=0,
+        ))
+        trace.events.append(Event(
+            event_type=EventType.LLM_PROMPT,
+            trust_boundary=TrustBoundary.B1_USER_TO_AGENT,
+            content=task.instruction,
+            metadata={"role": "user"},
+            turn_number=0,
+        ))
 
-    def _make_agent_fn(self):
-        base_url = self._base_url
-        api_key = self._api_key
-        model = self._model
-        system_template = self._system_prompt_template
-        max_turns = self._max_turns
-        temperature = self._temperature
-        timeout = self._timeout
+        messages: list[dict[str, str]] = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": task.instruction},
+        ]
 
-        async def agent_fn(instruction: str, tools: dict) -> str:
-            tool_list = "\n".join(f"- {name}(**kwargs): call with keyword arguments" for name in tools)
-            system_prompt = system_template.format(tool_list=tool_list)
-
-            messages: list[dict[str, str]] = [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": instruction},
-            ]
-
-            async with httpx.AsyncClient(timeout=timeout) as client:
-                for _turn in range(max_turns):
-                    response = await client.post(
-                        f"{base_url}/chat/completions",
-                        headers={"Authorization": f"Bearer {api_key}"},
+        try:
+            async with httpx.AsyncClient(timeout=self._timeout) as client:
+                for turn in range(1, self._max_turns + 1):
+                    resp = await client.post(
+                        f"{self._base_url}/chat/completions",
+                        headers={"Authorization": f"Bearer {self._api_key}"},
                         json={
-                            "model": model,
+                            "model": self._model,
                             "messages": messages,
-                            "temperature": temperature,
+                            "temperature": self._temperature,
                             "max_tokens": 1024,
                         },
                     )
-                    response.raise_for_status()
-                    reply = response.json()["choices"][0]["message"]["content"]
+                    resp.raise_for_status()
+                    data = resp.json()
+                    reply = data["choices"][0]["message"]["content"]
+                    usage = data.get("usage", {})
+
+                    trace.events.append(Event(
+                        event_type=EventType.LLM_RESPONSE,
+                        trust_boundary=TrustBoundary.B1_USER_TO_AGENT,
+                        content=reply,
+                        metadata={
+                            "model": self._model,
+                            "turn": turn,
+                            "prompt_tokens": usage.get("prompt_tokens"),
+                            "completion_tokens": usage.get("completion_tokens"),
+                        },
+                        turn_number=turn,
+                    ))
 
                     tool_call = _extract_tool_call(reply)
                     if tool_call is None:
-                        return reply
+                        trace.final_output = reply
+                        break
 
                     tool_name = tool_call["tool"]
                     tool_args = tool_call.get("args", {})
 
-                    if tool_name not in tools:
+                    if tool_name not in tool_names:
+                        trace.events.append(Event(
+                            event_type=EventType.TOOL_CALL,
+                            trust_boundary=TrustBoundary.B4_AGENT_TO_TOOL,
+                            tool_name=tool_name,
+                            tool_args=tool_args,
+                            metadata={"error": "tool_not_found"},
+                            turn_number=turn,
+                        ))
                         messages.append({"role": "assistant", "content": reply})
-                        messages.append(
-                            {
-                                "role": "user",
-                                "content": f"Error: tool '{tool_name}' not available. "
-                                f"Available tools: {', '.join(tools.keys())}",
-                            }
-                        )
+                        messages.append({
+                            "role": "user",
+                            "content": f"Error: tool '{tool_name}' not available. "
+                            f"Available tools: {', '.join(sorted(tool_names))}",
+                        })
                         continue
 
-                    result = await tools[tool_name](**tool_args)
+                    trace.events.append(Event(
+                        event_type=EventType.TOOL_CALL,
+                        trust_boundary=TrustBoundary.B4_AGENT_TO_TOOL,
+                        tool_name=tool_name,
+                        tool_args=tool_args,
+                        turn_number=turn,
+                    ))
+
+                    result = runtime.execute(tool_name, tool_args)
+
+                    if tool_name in _FILE_READ_TOOLS and "path" in tool_args:
+                        trace.events.append(Event(
+                            event_type=EventType.FILE_READ,
+                            trust_boundary=TrustBoundary.B4_AGENT_TO_TOOL,
+                            file_path=tool_args["path"],
+                            content=str(result)[:500],
+                            turn_number=turn,
+                        ))
+
+                    if tool_name in _HTTP_TOOLS and "url" in tool_args:
+                        trace.events.append(Event(
+                            event_type=EventType.NETWORK_REQUEST,
+                            trust_boundary=TrustBoundary.B4_AGENT_TO_TOOL,
+                            url=tool_args["url"],
+                            turn_number=turn,
+                        ))
+
+                    trace.events.append(Event(
+                        event_type=EventType.TOOL_RESULT,
+                        trust_boundary=TrustBoundary.B3_TOOL_OUTPUT_TO_AGENT,
+                        tool_name=tool_name,
+                        tool_result=result,
+                        turn_number=turn,
+                    ))
 
                     messages.append({"role": "assistant", "content": reply})
-                    messages.append(
-                        {
-                            "role": "user",
-                            "content": f"Tool result:\n{result}",
-                        }
-                    )
+                    messages.append({
+                        "role": "user",
+                        "content": f"Tool result:\n{result}",
+                    })
+                else:
+                    trace.final_output = "Max turns reached."
 
-            return "Max turns reached."
+        except Exception as e:
+            trace.error = str(e)
+            logger.warning("LLMAdapter error: %s", e)
+        finally:
+            trace.ended_at = datetime.now(UTC)
 
-        return agent_fn
+        return trace
+
+    async def run_streaming(
+        self, task: AgentTask, environment: Environment
+    ) -> AsyncIterator[Event]:
+        trace = await self.run(task, environment)
+        for event in trace.events:
+            yield event

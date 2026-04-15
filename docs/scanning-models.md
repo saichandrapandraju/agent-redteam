@@ -58,10 +58,10 @@ flowchart TD
     FinalOutput --> Trace[AgentTrace]
 ```
 
-1. The model receives a system prompt describing available tools
-2. It can call tools by outputting structured JSON
-3. Tool results are fed back for the next turn
-4. All interactions are captured into an `AgentTrace` for analysis
+1. The model receives a system prompt listing available tools
+2. It can call tools by outputting `{"tool": "name", "args": {...}}` (bare or in markdown code blocks)
+3. Tool results are fed back as the next user message for the next turn
+4. **Every turn** is captured into the `AgentTrace`: system prompt, user messages, each model response (with token counts), tool calls with arguments, tool results, and the final output — giving full visibility for detectors and post-scan analysis
 
 ## Compatible Providers
 
@@ -86,3 +86,7 @@ Any provider exposing the OpenAI chat completions API works:
 | Testing an agent with custom tool implementations | `CallableAdapter` |
 
 `LLMAdapter` is the lowest-barrier entry point — if you can curl a model endpoint, you can scan it. For testing agents with custom business logic, routing, or memory, use `CallableAdapter` instead.
+
+## Example: Scanning a vLLM Model
+
+See `examples/vllm_agent_scan.py` for a complete working example that scans a vLLM-hosted model across 8 vulnerability classes with detailed trace output showing the full model conversation, tool calls, and signal detection.
